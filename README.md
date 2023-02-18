@@ -6,7 +6,7 @@ Arcpy batch processed spatial time series analysis of woodpeckers in NC.
 ### Running this Analysis
 Running this entire script from start to finish can take a fair amount of time (~60-90 minutes). This is for a few reasons:
 
-1. There is simply a lot of data, so everything takes a while
+1. There is simply a lot of data. It's unavoidable.
 2. The first time the script is run, the data needs to be downloaded from the 
    [FeederWatch website](https://feederwatch.org/explore/raw-dataset-requests/). 
    Depending on your internet speed, this can take a while.
