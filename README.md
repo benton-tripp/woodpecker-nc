@@ -8,7 +8,7 @@ Running this entire script from start to finish can take a fair amount of time (
 
 1. There is simply a lot of data, so everything takes a while
 2. The first time the script is run, the data needs to be downloaded from the 
-   [FeederWatch]website(https://feederwatch.org/explore/raw-dataset-requests/). 
+   [FeederWatch website](https://feederwatch.org/explore/raw-dataset-requests/). 
    Depending on your internet speed, this can take a while.
 3. The actual analysis is pretty computationally heavy. In particular, the 
    [local outlier analysis](https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/localoutlieranalysis.htm) is conducting several hundred permutations of the data, so it takes a fair amount of time.
