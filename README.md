@@ -14,7 +14,7 @@ Running this entire script from start to finish can take a fair amount of time (
    [local outlier analysis](https://pro.arcgis.com/en/pro-app/latest/tool-reference/space-time-pattern-mining/localoutlieranalysis.htm) is conducting several hundred permutations of the data, so it takes a fair amount of time.
 
 To run, first clone/download the project into your desired location and navigate to
-the `woodpecker-nc` directory. Then run:
+the `woodpecker-nc` directory. Activate a python environment with `arcpy`, `numpy`, and `pandas` installed (you will need ArcGIS Pro installed on your machine to use `arcpy`). Then run:
 
 ```
 python woodpeckers_nc.py <PROJECT_PATH>
