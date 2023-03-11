@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import os
 
+# Data from https://feederwatch.org/explore/raw-dataset-requests/
+
 def get_species_codes() -> pd.DataFrame:
     """
     This function queries the Species Codes sheet from the FeederWatch Data Dictionary. The
@@ -16,10 +18,9 @@ def get_species_codes() -> pd.DataFrame:
     url = 'https://drive.google.com/file/d/1kHmx2XhA2MJtEyTNMpwqTQEnoa9M7Il2/view?usp=sharing'
     url = 'https://drive.google.com/uc?id=' + url.split('/')[-2]
     # Read the Excel Sheet with the Species Codes
-    # Data from https://feederwatch.org/explore/raw-dataset-requests/
     species = pd.read_excel(url, sheet_name='Species Codes', header=1)
     # Filter and rename columns
-    species = species[['SPECIES_CODE', 'PRI_COM_NAME_INDXD', 'FAMILY']]\
+    species = species[['SPECIES_CODE', 'PRI_COM_NAME_INDXD', 'FAMILY']]/
         .rename(columns={'SPECIES_CODE':'species_code', 
                          'PRI_COM_NAME_INDXD':'species_name',
                          'FAMILY':'family'})
@@ -46,9 +47,8 @@ def clean_fw_data(data:pd.DataFrame,
                  'day2_am', 'day2_pm', 'effort_hrs_atleast', 
                  'snow_dep_atleast', 'data_entry_method']
     # Output names of fields in dataset (to be kept)
-    out_names = ['species_code', 'species_name', 'how_many', 'loc_id', 'latitude', 'longitude', 'subnational1_code',
-                 'date', 'observation_period', 'day1_am', 'day1_pm', 
-                 'day2_am', 'day2_pm']
+    out_names = ['species_code', 'species_name', 'how_many', 'latitude', 
+                 'longitude', 'subnational1_code', 'date']
     # Preprocessing (fix column names, include/exclude fields)
     data.rename(columns=str.lower, inplace=True)
     other_names = [n for n in all_names if n not in data.columns]
@@ -63,17 +63,18 @@ def clean_fw_data(data:pd.DataFrame,
     data['date'] = pd.to_datetime(dict(year=data.year, 
                                        month=data.month, 
                                        day=data.day))
-    data['observation_period'] = data.date.astype(str) + " to " + (data.date + pd.Timedelta(days=1)).astype(str)
     # Return, Ensuring correct order, specific output columns, sorted
     return data[out_names].sort_values(by=['date', 'species_name'], ascending=[True, True])
 
-def get_fw_data(outfile:str,
+def getFeedWatcherData(outfile:str,
                        tfs:list, 
                        birds:pd.DataFrame, 
                        sub_national_code:list=[], 
                        out_dir:str='data', 
                        file_suffix:str='',
-                       save_:bool=True) -> pd.DataFrame:
+                       save_:bool=True,
+                       min_year:int=2017,
+                       max_year:int=2019) -> pd.DataFrame:
     """
     Gets FeederWatch data from website. When reading directly from the URLs 
     and saving the output, this can take a while (depending on internet speed).
@@ -89,6 +90,8 @@ def get_fw_data(outfile:str,
     - out_dir: Directory in which to save data
     - file_suffix: Suffix of file names
     - save_: Whether or not to save the output to a gzipped file
+    - min_year: minimum year to filter data
+    - max_year: maximum year to filter data
     Returns a pandas dataframe of the selected FeederWatch bird data
     """
     final_out_file = os.path.join(out_dir, outfile)
@@ -100,7 +103,6 @@ def get_fw_data(outfile:str,
         df_lis = list()
         for i in np.arange(0, len(tfs)):
             # Read Data (either from URL, or from previously saved data if available)
-            # Data from https://feederwatch.org/explore/raw-dataset-requests/
             tf = tfs[i]
             out_file = os.path.join(out_dir, f'FW_{tf}_{file_suffix}.csv.gz')
             if not os.path.isfile(out_file):
@@ -117,11 +119,19 @@ def get_fw_data(outfile:str,
             else:
                 print(f"Reading {tf} data from {out_file}")
                 data = pd.read_csv(out_file, compression='gzip')
+                data['date'] = pd.to_datetime(data.date)
             # Append to list
             df_lis.append(data)
         # Combine list into single dataframe
         print("Concatenating list of dataframes")
         out = pd.concat(df_lis)
+        # Filter by date
+        out = out[out['date'].dt.year >= min_year]
+        out = out[out['date'].dt.year <= max_year]
         # Save to file
         out.to_csv(final_out_file, index=False)
     return out
+
+# Timeframes available in FeederWatch:
+# '1988_1995', '1996_2000', '2001_2005', '2006_2010', 
+# '2011_2015', '2016_2020', '2021'

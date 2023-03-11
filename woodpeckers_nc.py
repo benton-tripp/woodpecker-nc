@@ -1,8 +1,13 @@
 # import libraries
-import sys
+import pandas as pd
+import numpy as np
 import os
 import arcpy
-from get_bird_data import get_species_codes, get_fw_data
+import re 
+from io import BytesIO
+from urllib.request import urlopen
+from zipfile import ZipFile
+from get_bird_data import get_species_codes, getFeedWatcherData
 from process_bird_data import batch_bird_analysis
 
 # Define Globals; Setup
@@ -26,23 +31,20 @@ if __name__ == "__main__":
 
     ### Get data #####
 
-    # Timeframes available in FeederWatch
-    data_timeframes = ['1988_1995', '1996_2000', '2001_2005', 
-                    '2006_2010', '2011_2015', '2016_2020', 
-                    '2021']
+    # Select 2017 - 2019 (Covered by 2019 Land Cover Raster)
+    DATA_TIMEFRAMES = ['2016_2020']
     # All Species
-    species = get_species_codes()
+    SPECIES = get_species_codes()
     # Woodpecker Family
-    woodpeckers = species.loc[species['family'] == 'Picidae (Woodpeckers)']
-    # Get FW data for NC woodpeckers
-    # Data from https://feederwatch.org/explore/raw-dataset-requests/
-    fw = get_fw_data(outfile="FW_woodpeckers_NC.csv",
-                     tfs=data_timeframes,
-                     birds=woodpeckers,
-                     sub_national_code=['US-NC'],
-                     out_dir='data',
-                     file_suffix='woodpeckers_NC',
-                     save_=True)
+    WOODPECKERS = SPECIES.loc[SPECIES['family'] == 'Picidae (Woodpeckers)']
+
+    fw = getFeedWatcherData(outfile="FW_woodpeckers_NC.csv",
+                            tfs=DATA_TIMEFRAMES,
+                            birds=WOODPECKERS,
+                            sub_national_code=['US-NC'],
+                            out_dir='data',
+                            file_suffix='woodpeckers_NC',
+                            save_=True)
     
     ### Process Data and Analyze #####
 

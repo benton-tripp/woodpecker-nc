@@ -1,6 +1,8 @@
 fw_GDB.gdb/*
 data/*
 !data/.gitkeep
+!data/NC_Land_Cover/.gitkeep
+archive/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
