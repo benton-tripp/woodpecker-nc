@@ -5,25 +5,33 @@ import os
 
 # Data from https://feederwatch.org/explore/raw-dataset-requests/
 
-def get_species_codes() -> pd.DataFrame:
+def get_species_codes(data_path:str) -> pd.DataFrame:
     """
     This function queries the Species Codes sheet from the FeederWatch Data Dictionary. The
     data is available through an excel sheet provided in the data website. This data will be 
     used to access the corresponding names and families of the different species codes.
     Returns a pandas dataframe of species (Fields: species_code, species_name, family)
     """
-    # First, set up the url for the data dictionary (Google Drive).
-    # Credit goes to the following StackOverflow answer for re-formatting the url:
-    # https://stackoverflow.com/questions/56611698/pandas-how-to-read-csv-file-from-google-drive-public
-    url = 'https://drive.google.com/file/d/1kHmx2XhA2MJtEyTNMpwqTQEnoa9M7Il2/view?usp=sharing'
-    url = 'https://drive.google.com/uc?id=' + url.split('/')[-2]
-    # Read the Excel Sheet with the Species Codes
-    species = pd.read_excel(url, sheet_name='Species Codes', header=1)
-    # Filter and rename columns
-    species = species[['SPECIES_CODE', 'PRI_COM_NAME_INDXD', 'FAMILY']]/
-        .rename(columns={'SPECIES_CODE':'species_code', 
-                         'PRI_COM_NAME_INDXD':'species_name',
-                         'FAMILY':'family'})
+    print("Getting Species codes...")
+    out_file_name = "species_codes.csv"
+    outFile = os.path.join(data_path, out_file_name)
+    if out_file_name in os.listdir(data_path):
+        species = pd.read_csv(outFile)
+    else:
+        # First, set up the url for the data dictionary (Google Drive).
+        # Credit goes to the following StackOverflow answer for re-formatting the url:
+        # https://stackoverflow.com/questions/56611698/pandas-how-to-read-csv-file-from-google-drive-public
+        url = 'https://drive.google.com/file/d/1kHmx2XhA2MJtEyTNMpwqTQEnoa9M7Il2/view?usp=sharing'
+        url = 'https://drive.google.com/uc?id=' + url.split('/')[-2]
+        # Read the Excel Sheet with the Species Codes
+        species = pd.read_excel(url, sheet_name='Species Codes', header=1)
+        # Filter and rename columns
+        species = species[['SPECIES_CODE', 'PRI_COM_NAME_INDXD', 'FAMILY']]\
+            .rename(columns={'SPECIES_CODE':'species_code', 
+                            'PRI_COM_NAME_INDXD':'species_name',
+                            'FAMILY':'family'})
+        species.to_csv(outFile, index=False)
+        print("Completed species code retrieval")
     return species
 
 def clean_fw_data(data:pd.DataFrame, 
@@ -63,6 +71,7 @@ def clean_fw_data(data:pd.DataFrame,
     data['date'] = pd.to_datetime(dict(year=data.year, 
                                        month=data.month, 
                                        day=data.day))
+    
     # Return, Ensuring correct order, specific output columns, sorted
     return data[out_names].sort_values(by=['date', 'species_name'], ascending=[True, True])
 
@@ -94,19 +103,23 @@ def getFeedWatcherData(outfile:str,
     - max_year: maximum year to filter data
     Returns a pandas dataframe of the selected FeederWatch bird data
     """
+    print("Getting FeederWatch data...")
     final_out_file = os.path.join(out_dir, outfile)
     # First check if the file already exists
     if os.path.isfile(final_out_file):
+        print("Data already exists; Reading from csv...")
         out = pd.read_csv(final_out_file)
         out['date'] = pd.to_datetime(out.date)
     else:
+        print("Unable to find previously downloaded data; Querying data source by time frame...")
         df_lis = list()
         for i in np.arange(0, len(tfs)):
             # Read Data (either from URL, or from previously saved data if available)
             tf = tfs[i]
             out_file = os.path.join(out_dir, f'FW_{tf}_{file_suffix}.csv.gz')
             if not os.path.isfile(out_file):
-                url = 'https://clo-pfw-prod.s3.us-west-2.amazonaws.com/data/PFW_' + tf + '_public.csv'
+                url = 'https://clo-pfw-prod.s3.us-west-2.amazonaws.com/data/PFW_' + tf + \
+                    '_public.csv'
                 print(f"Getting {tf} data from {url}")
                 # Read/Clean data
                 data = clean_fw_data(data=pd.read_csv(url), 
@@ -130,6 +143,7 @@ def getFeedWatcherData(outfile:str,
         out = out[out['date'].dt.year <= max_year]
         # Save to file
         out.to_csv(final_out_file, index=False)
+    print("Completed FeederWatch data retrieval")
     return out
 
 # Timeframes available in FeederWatch:

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 
 class Species():
     def __init__(self, dataframe:pd.DataFrame) -> None:

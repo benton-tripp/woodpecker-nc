@@ -1,6 +1,7 @@
+import os
 import arcpy
 import pandas as pd
-from final_project.birds import Bird
+from birds import Bird
 
 def batchBirdAnalysis(fw_file:str, 
                       base_fc:str,
@@ -27,6 +28,7 @@ def batchBirdAnalysis(fw_file:str,
     - fw_df: FeederWatch dataframe
     - species_df: Species dataframe
     """
+    print("Starting batch processing of bird data prior to analysis...")
     # Create base feature class
     if base_fc not in existing_fcs:
         arcpy.management.XYTableToPoint(in_table=os.path.join(data_path, fw_file),
@@ -46,3 +48,5 @@ def batchBirdAnalysis(fw_file:str,
             arcpy.analysis.Select(f"{base_fc}_projected", 
                                 brd.fc_name, 
                                 f"species_name = '{brd.name}'")
+    
+    print("Finishd batch processing of bird data prior to analysis")
