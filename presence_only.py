@@ -1,11 +1,16 @@
 # https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-statistics/presence-only-prediction.htm
 import arcpy 
+import pandas as pd
+from birds import Bird
 
-def batchMaxEnt(species:list) -> None:
+
+def batchMaxEnt(species_df:pd.DataFrame) -> None:
     print("Starting batch presence-only predictions...")
-    for s in species:
-        print(f"Modeling {s} distribution in NC using the MaxEnt algorithm")
-        arcpy.stats.PresenceOnlyPrediction(input_point_features=f"FW_{s}_NC", 
+    for species_name in species_df.species_name.unique():
+        brd = Bird(species_df, species_name)
+        s = brd.formatted_name
+        print(f"Modeling {brd.name} distribution in NC using the MaxEnt algorithm...")
+        arcpy.stats.PresenceOnlyPrediction(input_point_features=brd.fc_name, 
                                         contains_background="PRESENCE_ONLY_POINTS", 
                                         explanatory_variables=None, #TODO
                                         presence_indicator_field=None, 

@@ -1,6 +1,7 @@
 # import libraries
 import sys
 import os
+import pdb
 import arcpy
 from get_bird_data import get_species_codes, getFeedWatcherData
 from get_explanatory_data import getRasterData, getDEMData
@@ -64,7 +65,8 @@ if __name__ == "__main__":
     # Get DEM data; Copy to GDB
     getDEMData(data_path=DATA_PATH, wspace=os.path.join(DATA_PATH, DB_PATH))
 
+    # pdb.set_trace()
     ### Analyze ###
-    batchMaxEnt()
+    batchMaxEnt(species_df=SPECIES)
 
     print("Finished running woodpeckers_nc.py")
