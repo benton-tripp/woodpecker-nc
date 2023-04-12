@@ -3,6 +3,7 @@ data/*
 !data/.gitkeep
 !data/NC_Land_Cover/.gitkeep
 archive/*
+.backup/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
