@@ -6,7 +6,7 @@ import arcpy
 
 # Data from https://feederwatch.org/explore/raw-dataset-requests/
 
-def get_species_codes(data_path:str) -> pd.DataFrame:
+def getSpeciesCodes(data_path:str) -> pd.DataFrame:
     """
     This function queries the Species Codes sheet from the FeederWatch Data Dictionary. The
     data is available through an excel sheet provided in the data website. This data will be 
@@ -37,15 +37,15 @@ def get_species_codes(data_path:str) -> pd.DataFrame:
         arcpy.AddMessage("Completed species code retrieval")
     return species
 
-def clean_fw_data(data:pd.DataFrame, 
-                  birds:pd.DataFrame, 
-                  sub_national_code:list=[]) -> pd.DataFrame:
+def cleanFeederWatchData(data:pd.DataFrame, 
+                         birds:pd.DataFrame, 
+                         sub_national_code:list=[]) -> pd.DataFrame:
     """
     This function cleans the FeederWatch data so that it only contains 
     relevent fields, accurate (valid) data, specified birds, and specified locations.
     Args:
     - data: a pandas dataframe; raw data downloaded from FeederWatch site
-    - birds: species data - output of get_species_codes(). 
+    - birds: species data - output of getSpeciesCodes(). 
              * Note: It can be a subset of this data (e.g., a specific family)
     - sub_national_code: list of `subnational1_code` fields to filter to 
     Returns a subset of the original data input, with cleaned field names.
@@ -93,7 +93,7 @@ def getFeedWatcherData(outfile:str,
     Each independent query (by date range) is saved to a gzipped .csv file,
     so if the process is interrupted or re-run, it can be read directly from
     that file instead of re-downloaded. Data is also cleaned/filtered (using 
-    `clean_fw_data()`), then concatenated and saved to a final .csv file.
+    `cleanFeederWatchData()`), then concatenated and saved to a final .csv file.
     Args: 
     - outfile: Final output file name
     - tfs: Time-frames to get data for
@@ -129,9 +129,9 @@ def getFeedWatcherData(outfile:str,
                 print(f"Getting {tf} data from {url}")
                 arcpy.AddMessage(f"Getting {tf} data from {url}")
                 # Read/Clean data
-                data = clean_fw_data(data=pd.read_csv(url), 
-                                    birds=birds, 
-                                    sub_national_code=sub_national_code)
+                data = cleanFeederWatchData(data=pd.read_csv(url), 
+                                            birds=birds, 
+                                            sub_national_code=sub_national_code)
                 if save_:
                     # If not previously cached, save as gzip
                     print(f"Saving {tf} data to {out_file}")

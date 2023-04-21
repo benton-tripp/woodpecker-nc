@@ -3,7 +3,9 @@ import sys
 import os
 import arcpy
 from get_bird_data import get_species_codes, getFeedWatcherData
-from get_explanatory_data import getRasterData, getDEMData
+from get_dem_data import getDEMData
+from get_land_cover_data import getLandCoverData
+from get_weather_data import getWeatherData
 from process_bird_data import batchBirdAnalysis
 
 # Define variables 
@@ -71,10 +73,13 @@ if __name__ == "__main__":
                     species_df=WOODPECKERS,
                     _prefix=_PREFIX)
     
-    # Get raster data; Resample to GDB
-    getRasterData(data_path=DATA_PATH, wspace=DB_PATH)
+    # Get land cover raster data; Resample to GDB
+    getLandCoverData(data_path=DATA_PATH, wspace=DB_PATH)
     # Get DEM data; Copy to GDB
     getDEMData(data_path=DATA_PATH, wspace=DB_PATH)
+    # Get Weather raster data; Aggregate in GDB
+    getWeatherData(data_path=DATA_PATH, 
+                   wspace=DB_PATH)
 
     print("\n=================================\nData setup complete.\n=================================")
     arcpy.AddMessage("\n=================================\nData setup complete.\n=================================")
