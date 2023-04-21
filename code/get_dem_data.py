@@ -1,11 +1,10 @@
 # import libraries
 import os
-import arcpy 
-from urllib.request import urlopen
+import arcpy
 import zipfile
 import urllib.request
 
-def getDEMData(data_path:str, wspace:str) -> None:
+def getDEMData(data_path:str, wspace:str, coord_sys:arcpy.SpatialReference) -> None:
     """
     MUST BE ON NCSU NETWORK (either on-campus or connected to VPN)
     """
@@ -36,5 +35,22 @@ def getDEMData(data_path:str, wspace:str) -> None:
             
     if "nc250" not in arcpy.ListRasters():
         arcpy.management.CopyRaster(os.path.join(dem_path, "nc250"), "nc250")
+
+    # Reproject the input raster if the spatial references do not match
+    if "nc250_projected" not in arcpy.ListRasters():
+        arcpy.ProjectRaster_management("nc250", "nc250_projected", coord_sys)
+
+    if "nc250_masked" not in arcpy.ListRasters():
+        # Get the mask polygon's extent
+        mask_polygon_extent = arcpy.Describe("nc_state_boundary").extent
+
+        # Set the output extent to match the mask polygon's extent
+        arcpy.env.extent = mask_polygon_extent
+
+        out_dem = arcpy.sa.ExtractByMask("nc250_projected", "nc_state_boundary")
+        out_dem.save("nc250_masked")
+
+        arcpy.env.extent = "MAXOF"
+
     print("Completed retrieval of explanatory DEM")
     arcpy.AddMessage("Completed retrieval of explanatory DEM")

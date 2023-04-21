@@ -3,16 +3,16 @@ import arcpy
 import pandas as pd
 from birds import Bird
 
-def batchBirdAnalysis(fw_file:str, 
-                      base_fc:str,
-                      existing_fcs:list,
-                      out_coordinate_system:arcpy.SpatialReference, 
-                      data_path:str,
-                      fw_df:pd.DataFrame,
-                      species_df:pd.DataFrame,
-                      _prefix:str = "FW_") -> None:
+def batchBirdProcessing(fw_file:str, 
+                        base_fc:str,
+                        existing_fcs:list,
+                        out_coordinate_system:arcpy.SpatialReference, 
+                        data_path:str,
+                        fw_df:pd.DataFrame,
+                        species_df:pd.DataFrame,
+                        _prefix:str = "FW_") -> None:
     """
-    Batch processing and analysis of FeederWatch bird data. 
+    Batch processing of FeederWatch bird data. 
     Steps:
     1) Creates Feature Class from .csv file in file Geodatabase
     2) Adds projection, saving to new Feature Class
@@ -42,13 +42,21 @@ def batchBirdAnalysis(fw_file:str,
         arcpy.management.Project(base_fc, 
                                 f"{base_fc}_projected", 
                                 out_coordinate_system)
+    if f"{base_fc}_NC" not in existing_fcs:
+        arcpy.SelectLayerByLocation_management(f"{base_fc}_projected", 
+                                               "INTERSECT", 
+                                               "nc_state_boundary")
+        
+        arcpy.CopyFeatures_management(f"{base_fc}_projected", 
+                                      f"{base_fc}_NC")
+
     # Add to GDB by species
     for species_name in fw_df.species_name.unique():
         brd = Bird(dataframe=species_df, bird_name=species_name, _prefix=_prefix)
         if brd.fc_name not in existing_fcs:
             print(f'Adding {brd.name} to gdb...')
             arcpy.AddMessage(f'Adding {brd.name} to gdb...')
-            arcpy.analysis.Select(f"{base_fc}_projected", 
+            arcpy.analysis.Select(f"{base_fc}_NC", 
                                 brd.fc_name, 
                                 f"species_name = '{brd.name}'")
     

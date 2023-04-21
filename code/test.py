@@ -1,134 +1,91 @@
-import itertools
-import arcpy 
+import arcpy
+import arcpy.mp as mp
+import os
 import pandas as pd
 from birds import Bird
 import pickle
-from contextlib import redirect_stdout
-import os
+
+with open("C:/Users/bento/final_project/woodpeckerNC/data/species_df.pickle", "rb") as f:
+    species_df = pickle.load(f)
+
+project_path="C:/Users/bento/final_project/woodpeckerNC/woodpeckerNC.aprx"
+wspace="C:/Users/bento/final_project/woodpeckerNC/woodpeckerNC.gdb"
+data_path="C:/Users/bento/final_project/woodpeckerNC/data"
+output_folder="maps"
+
+# Set workspace
+arcpy.env.workspace = wspace
+
+# Create an output folder for the PDFs
+output_folder = os.path.join(data_path, "maps")
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Get trained rasters
+trained_rasters = arcpy.ListRasters("*_NC_Trained_Raster")
+
+# Get bird/raster name key/value pairs
+brd_rasters = [{Bird(species_df, name).formatted_name + \
+                "_NC_Trained_Raster":Bird(species_df, name).formatted_name.replace("_", " ")}\
+                for name in species_df.species_name.unique() \
+                if Bird(species_df, name).formatted_name + "_NC_Trained_Raster" in trained_rasters]
+brd_rasters = {key: value for d in brd_rasters for key, value in d.items()}
 
 
-def scoreFromSensitivityTable(sensitivity_table: str) -> float:
-    # field_names = [field.name for field in arcpy.ListFields(sensitivity_table)]
-    with arcpy.da.SearchCursor(sensitivity_table, 
-                            ['CUTOFF', 'FPR', 'TPR', 'FNR', 'TNR', 'SENSE', 'SPEC']) as cursor:
-        vals = [
-            {
-                "cutoff": cutoff,
-                "FP": FP,
-                "TP": TP,
-                "FN": FN,
-                "TN": TN,
-                "recall": recall,
-                "specificity": specificity,
-                "precision": TP / (TP + FP),
-                "f1": 2 * ((TP / (TP + FP)) * recall) / ((TP / (TP + FP)) + recall),
-            }
-            for (cutoff, FP, TP, FN, TN, recall, specificity) in cursor
-        ]
-    df = pd.DataFrame.from_dict(vals)
-    return(df)
+# Define project
+project = arcpy.mp.ArcGISProject(project_path)
 
-def testBatchMaxEnt(species_df:pd.DataFrame, wspace:str) -> None:
-    print("Starting batch presence-only predictions...")
-    # Set workspace
-    arcpy.env.workspace = wspace
-    # Temporarily enable overwriting data
-    arcpy.env.overwriteOutput = True
+# Loop through each trained raster
+for raster in brd_rasters.keys():
+    # Get species name
+    species_name = brd_rasters[raster]
+    print(f"Adding {species_name} raster layer to map...")
 
-    # Create a null device to redirect the standard output
-    null_device = open(os.devnull, "w")
+    # Create a new map and add it to the project
+    m = project.listMaps("Map")[0]
+
+    # List layers in map
+    lyr_name = raster + "_Lyr"
+    layers = [l.name for l in m.listLayers()]
     
-    for species_name in species_df.species_name.unique():
-        brd = Bird(species_df, species_name)
-        s = brd.formatted_name
-        print(f"Modeling {brd.name} distribution in NC using the MaxEnt algorithm...")
-        
-        # Define parameter settings to test
-        parameter_grid = {
-            "number_of_iterations": [20, 50, 100],
-            "relative_weight": [50, 75, 100],
-            "spatial_thinning": ["NO_THINNING", "THINNING"],
-            "link_function": ["CLOGLOG", "LOGISTIC"],
-            "thinning_distance_band": ["2500 Meters", "5000 Meters"]
-        }
-        
-        # Generate all combinations of parameters
-        all_combinations = list(itertools.product(*parameter_grid.values()))
-        
-        # Initialize the best combination and its corresponding evaluation metric
-        best_combination = None
-        best_evaluation_metric = 0.0
-        
-        for i, combination in enumerate(all_combinations, start=1):
-            params = dict(zip(parameter_grid.keys(), combination))
-            print(f"Training model for {brd.name} with combination {i}...")
-            # Run MaxEnt with the current set of parameters
-            with redirect_stdout(null_device):
-                result = arcpy.stats.PresenceOnlyPrediction(input_point_features=brd.fc_name, 
-                                            contains_background="PRESENCE_ONLY_POINTS", 
-                                            explanatory_variables=None, #TODO
-                                            presence_indicator_field=None, 
-                                            distance_features=None, 
-                                            # T/F -> categorical/continuous
-                                            explanatory_rasters=[["nc_nlcd2019_Resample_2k", "true"], 
-                                                                ["nc250", "false"],
-                                                                ["avgPrecip_all_years", "false"], 
-                                                                ["minTemp_all_years", "false"], 
-                                                                ["maxTemp_all_years", "false"]], 
-                                            basis_expansion_functions="HINGE", 
-                                            number_knots=10, 
-                                            study_area_type="RASTER_EXTENT", 
-                                            study_area_polygon=None, 
-                                            spatial_thinning="THINNING", 
-                                            thinning_distance_band=params["thinning_distance_band"], 
-                                            number_of_iterations=params["number_of_iterations"], 
-                                            relative_weight=params["relative_weight"],  #1-100
-                                            link_function=params["link_function"], 
-                                            presence_probability_cutoff=0.5, 
-                                            output_trained_features=f"{s}_NC_Trained_Features_{i}", 
-                                            output_trained_raster=f"{s}_NC_Trained_Raster_{i}", 
-                                            output_response_curve_table=f"{s}_NC_Response_Curve_{i}", 
-                                            output_sensitivity_table=f"{s}_NC_Sensitivity_Table_{i}", 
-                                            features_to_predict=None, 
-                                            output_pred_features=None, 
-                                            output_pred_raster=None, 
-                                            explanatory_variable_matching=None, 
-                                            explanatory_distance_matching=None, 
-                                            explanatory_rasters_matching=None, 
-                                            allow_predictions_outside_of_data_ranges="ALLOWED", 
-                                            resampling_scheme="RANDOM", 
-                                            number_of_groups=5)
+    # Hide all existing layers
+    if len(m.listLayers()) > 0:
+        for l in m.listLayers():
+            l.visible = False
 
-            # Calculate F1 score using the output_sensitivity_table
-            score = scoreFromSensitivityTable(f"{s}_NC_Sensitivity_Table_{i}")
-            f1 = max(score.f1)
-            cutoff = round(score.loc[score.f1 == f1].cutoff.iloc[0], 2)
-            print("===============================")
-            print(f"{brd.name} Combination {i} results:")
-            print("-------------------------------")
-            print(f"Max F1: {round(f1, 4)}")
-            print(f"Best Cutoff: {cutoff}")
-            print("===============================")
+    if lyr_name not in layers:
+        # Create a raster layer from the raster
+        print(f"Adding {lyr_name} to map...")
+        raster_layer = arcpy.MakeRasterLayer_management(raster, raster + "_Lyr")
+        m.addLayer(raster_layer[0])
+    else:
+        print(f"{lyr_name} already in map")
 
-            # Compare the current F1 score with the best one found so far
-            if f1 > best_evaluation_metric:
-                print(f"Updating results of combination {i} to champion model for {brd.name}...")
-                best_evaluation_metric = f1
-                best_combination = combination
-                # Save model data to a pickle file
-                model_data = {
-                    "input_point_features":brd.fc_name,
-                    "species":brd.name,
-                    "f1":f1,
-                    "cutoff":cutoff,
-                    "score_table":score,
-                    "input_values":result.inputValues,
-                }
-                with open(f"data/model_data/{s}_model_data.pickle", "wb") as f:
-                    pickle.dump(model_data, f)
+    # Define layer, make visible
+    layer = [l for l in m.listLayers() if l.name == lyr_name][0]
+    layer.visible = True
 
-        print(f"Best model for {brd.name}: {best_combination}, {best_evaluation_metric}")
+    print(f"Creating a layout for {species_name}...")
+    # Get the default layout
+    layout = project.listLayouts("Layout")[0]
 
-    print("Finished presence-only prediction batch process")
-    # Disable overwriting data
-    arcpy.env.overwriteOutput = False
+    # Update the title of the layout
+    title = [el for el in layout.listElements("TEXT_ELEMENT")][0]
+    print("Updating title in layout...")
+    title.text = species_name + " Modeled Distribution"
+    
+    # Zoom to the extent of the raster layer
+    print("Zooming to map layer extent...")
+    mf = layout.listElements("MAPFRAME_ELEMENT")[0]
+    mf.zoomToAllLayers()
+
+    # Export the layout to a PDF
+    pdf_path = os.path.join(output_folder, raster.replace('Trained_Raster', 'Dist') + ".pdf")
+    print(f"Exporting {species_name} layout to {pdf_path}...")
+    layout.exportToPDF(pdf_path)
+    
+    # Hide the added raster layer from the map
+    layer.visible = False
+
+# Save the current state of the project
+project.save()

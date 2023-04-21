@@ -3,10 +3,11 @@ import sys
 import os
 import arcpy
 from get_bird_data import getSpeciesCodes, getFeedWatcherData
+from get_nc_boundary import getNCBoundary
 from get_dem_data import getDEMData
 from get_land_cover_data import getLandCoverData
 from get_weather_data import getWeatherData
-from process_bird_data import batchBirdAnalysis
+from process_bird_data import batchBirdProcessing
 from presence_only import batchMaxEnt
 
 
@@ -41,6 +42,11 @@ if __name__ == "__main__":
     # Projected Coordinate System
     coord_system = arcpy.SpatialReference("NAD 1983 StatePlane North Carolina FIPS 3200 (US Feet)")
 
+    ### Get NC Boundary ##########
+    getNCBoundary(data_path=DATA_PATH, 
+                  wspace=DB_PATH, 
+                  coord_sys=coord_system)
+
     ### Get FeederWatch data #####
    
     # Select 2017 - 2019 (Covered by 2019 Land Cover Raster)
@@ -63,21 +69,21 @@ if __name__ == "__main__":
     ### Process Data (including explanatory variables); set up GDB #####
 
     # Batch process by species type, for woodpecker family in NC
-    batchBirdAnalysis(fw_file=FW_FILE, 
-                    base_fc=BASE_FC,
-                    existing_fcs=existing_fcs, 
-                    out_coordinate_system=coord_system,
-                    data_path=DATA_PATH,
-                    fw_df=fw,
-                    species_df=WOODPECKERS,
-                    _prefix=_PREFIX)
+    batchBirdProcessing(fw_file=FW_FILE, 
+                        base_fc=BASE_FC,
+                        existing_fcs=existing_fcs, 
+                        out_coordinate_system=coord_system,
+                        data_path=DATA_PATH,
+                        fw_df=fw,
+                        species_df=WOODPECKERS,
+                        _prefix=_PREFIX)
     
     # Get land cover raster data; Resample to GDB
     getLandCoverData(data_path=DATA_PATH, wspace=DB_PATH)
     # Get DEM data; Copy to GDB
-    getDEMData(data_path=DATA_PATH, wspace=DB_PATH)
+    getDEMData(data_path=DATA_PATH, wspace=DB_PATH, coord_sys=coord_system)
     # Get Weather raster data; Aggregate in GDB
-    getWeatherData(data_path=DATA_PATH, wspace=DB_PATH, coord_sys=coord_system)
+    getWeatherData(data_path=DATA_PATH, wspace=DB_PATH)
 
     # pdb.set_trace()
     ### Analyze ###
