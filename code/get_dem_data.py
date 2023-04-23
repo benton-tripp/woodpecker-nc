@@ -34,13 +34,11 @@ def getDEMData(data_path:str, wspace:str, coord_sys:arcpy.SpatialReference) -> N
         os.remove("nc250.zip")
             
     if "nc250" not in arcpy.ListRasters():
-        arcpy.management.CopyRaster(os.path.join(dem_path, "nc250"), "nc250")
+        arcpy.management.CopyRaster(os.path.join(dem_path, "nc250"), "nc250_base")
 
-    # Reproject the input raster if the spatial references do not match
-    if "nc250_projected" not in arcpy.ListRasters():
-        arcpy.ProjectRaster_management("nc250", "nc250_projected", coord_sys)
+        # Reproject the input raster if the spatial references do not match
+        arcpy.ProjectRaster_management("nc250_base", "nc250_projected", coord_sys)
 
-    if "nc250_masked" not in arcpy.ListRasters():
         # Get the mask polygon's extent
         mask_polygon_extent = arcpy.Describe("nc_state_boundary").extent
 
@@ -48,9 +46,13 @@ def getDEMData(data_path:str, wspace:str, coord_sys:arcpy.SpatialReference) -> N
         arcpy.env.extent = mask_polygon_extent
 
         out_dem = arcpy.sa.ExtractByMask("nc250_projected", "nc_state_boundary")
-        out_dem.save("nc250_masked")
+        out_dem.save("nc250")
 
         arcpy.env.extent = "MAXOF"
+
+        # Delete unneeded rasters
+        for ras in ["nc250_projected", "nc250_base"]:
+            arcpy.Delete_management(ras)
 
     print("Completed retrieval of explanatory DEM")
     arcpy.AddMessage("Completed retrieval of explanatory DEM")

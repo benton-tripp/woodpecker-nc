@@ -5,7 +5,7 @@ from io import BytesIO
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-def getLandCoverData(data_path:str, wspace:str) -> None:
+def getLandCoverData(data_path:str, wspace:str, coord_sys:arcpy.SpatialReference) -> None:
     print("Getting explanatory Land Cover Rasters...")
     arcpy.AddMessage("Getting explanatory Land Cover Rasters...")
     # Set workspace
@@ -32,7 +32,7 @@ def getLandCoverData(data_path:str, wspace:str) -> None:
             arcpy.AddMessage("NC_NLCD2019only.zip...")
             os.remove("NC_NLCD2019only.zip")
 
-    if 'nc_nlcd2019_Resample_2k' not in arcpy.ListRasters():
+    if 'nc_nlcd2019' not in arcpy.ListRasters():
         print("Resampling explanatory rasters to 2k...")
         arcpy.AddMessage("Resampling explanatory rasters to 2k...")
         # Resample cell size of raster(s), save to gdb
@@ -40,5 +40,24 @@ def getLandCoverData(data_path:str, wspace:str) -> None:
                                 "nc_nlcd2019_Resample_2k", 
                                 "2000 2000", 
                                 "NEAREST")
+        
+        # Reproject the input raster if the spatial references do not match
+        arcpy.ProjectRaster_management("nc_nlcd2019_Resample_2k", "nc_nlcd2019_projected", coord_sys)
+
+        # Get the mask polygon's extent
+        mask_polygon_extent = arcpy.Describe("nc_state_boundary").extent
+
+        # Set the output extent to match the mask polygon's extent
+        arcpy.env.extent = mask_polygon_extent
+
+        out_dem = arcpy.sa.ExtractByMask("nc_nlcd2019_projected", "nc_state_boundary")
+        out_dem.save("nc_nlcd2019")
+
+        arcpy.env.extent = "MAXOF"
+
+        # Delete unneeded rasters
+        for ras in ["nc_nlcd2019_projected", "nc_nlcd2019_Resample_2k"]:
+            arcpy.Delete_management(ras)
+
     print("Completed processing of explanatory rasters")
     arcpy.AddMessage("Completed processing of explanatory rasters")

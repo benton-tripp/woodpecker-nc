@@ -174,7 +174,7 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                 "presence_indicator_field":None,
                 "distance_features":None, 
                 # T/F -> categorical/continuous
-                "explanatory_rasters":[["nc_nlcd2019_Resample_2k", "true"],
+                "explanatory_rasters":[["nc_nlcd2019", "true"],
                                     ["nc250", "false"],
                                     ["avgPrecip_all_years", "false"],
                                     ["minTemp_all_years", "false"],

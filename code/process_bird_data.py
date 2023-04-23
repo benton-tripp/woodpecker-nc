@@ -8,6 +8,7 @@ def batchBirdProcessing(fw_file:str,
                         existing_fcs:list,
                         out_coordinate_system:arcpy.SpatialReference, 
                         data_path:str,
+                        wspace:str,
                         fw_df:pd.DataFrame,
                         species_df:pd.DataFrame,
                         _prefix:str = "FW_") -> None:
@@ -31,24 +32,29 @@ def batchBirdProcessing(fw_file:str,
     """
     print("Starting batch processing of bird data prior to analysis...")
     arcpy.AddMessage("Starting batch processing of bird data prior to analysis...")
+
+    arcpy.env.workspace = wspace
+    
     # Create base feature class
-    if base_fc not in existing_fcs:
+    if f"{base_fc}_NC" not in existing_fcs:
+        
         arcpy.management.XYTableToPoint(in_table=os.path.join(data_path, fw_file),
                                         out_feature_class=base_fc,
                                         x_field="longitude", 
                                         y_field="latitude")
-    # Add projection to base FC
-    if f"{base_fc}_projected" not in existing_fcs:
-        arcpy.management.Project(base_fc, 
-                                f"{base_fc}_projected", 
-                                out_coordinate_system)
-    if f"{base_fc}_NC" not in existing_fcs:
+        # Add projection to base FC
+        arcpy.Project_management(base_fc, f"{base_fc}_projected", out_coordinate_system)
+
         arcpy.SelectLayerByLocation_management(f"{base_fc}_projected", 
                                                "INTERSECT", 
                                                "nc_state_boundary")
         
         arcpy.CopyFeatures_management(f"{base_fc}_projected", 
                                       f"{base_fc}_NC")
+        
+        # Delete unneeded feature layers
+        for fc in [base_fc, f"{base_fc}_projected"]:
+            arcpy.Delete_management(fc)
 
     # Add to GDB by species
     for species_name in fw_df.species_name.unique():

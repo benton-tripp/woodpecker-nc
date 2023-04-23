@@ -26,8 +26,9 @@ def getNCBoundary(data_path:str, wspace:str, coord_sys:arcpy.SpatialReference) -
     if "nc_state_boundary" not in arcpy.ListFeatureClasses():
         arcpy.AddMessage("NC State Boundary download completed. Adding to geodatabase...")
         print("NC State Boundary download completed. Adding to geodatabase...")
-        arcpy.management.Dissolve(nc_shp_file , "nc_state_boundary", None, None, 
+        arcpy.management.Dissolve(nc_shp_file , "nc_state_boundary_dissolved", None, None, 
                                   "SINGLE_PART", "DISSOLVE_LINES")
-        arcpy.management.DefineProjection("nc_state_boundary", coord_sys)
+        arcpy.Project_management("nc_state_boundary_dissolved", "nc_state_boundary", coord_sys)
+        arcpy.Delete_management("nc_state_boundary_dissolved")
         arcpy.AddMessage(f"Finished adding boundary to geodatabase.")
         print("Finished adding boundary to geodatabase.")

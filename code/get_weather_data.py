@@ -37,7 +37,8 @@ def getWeatherData(data_path:str, wspace:str) -> None:
         
         # Trim to be only NC
         v_y_fc = f"{v}_{y}_weather_raster"
-        if not v_y_fc in arcpy.ListRasters():
+        if any(raster not in arcpy.ListRasters() for raster in \
+               ["maxTemp_all_years", "minTemp_all_years", "avgPrecip_all_years"]):
             arcpy.AddMessage(f"Saving {v_y_fc} raster to geodatabase...")
             print(f"Saving {v_y_fc} raster to geodatabase...")
             arcpy.env.workspace = dwnld_path
@@ -65,5 +66,12 @@ def getWeatherData(data_path:str, wspace:str) -> None:
                 print(f"Aggregating {var} for all years...")
                 outCellStats = arcpy.sa.CellStatistics(rasters, agg_func, "DATA")
                 outCellStats.save(raster_out)
-                arcpy.AddMessage(f"Finished.")
-                print(f"Finished.")
+                arcpy.AddMessage(f"Finished aggregating {var} for all years.")
+                print(f"Finished aggregating {var} for all years.")
+    
+    # Delete unneeded rasters
+    for v, y in pairs:
+        if f"{v}_{y}_weather_raster" in arcpy.ListRasters():
+            print(f"Cleaning up {v}_{y}_weather_raster")
+            arcpy.AddMessage(f"Cleaning up {v}_{y}_weather_raster")
+            arcpy.Delete_management(f"{v}_{y}_weather_raster")
