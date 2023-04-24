@@ -9,7 +9,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/code/woodpeckers_nc.py",
+            "program": "${workspaceFolder}/code/test.py",
             "console": "integratedTerminal",
             "args": ["woodpeckerNC.aprx"]
         }

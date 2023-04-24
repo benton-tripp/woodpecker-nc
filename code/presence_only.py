@@ -16,6 +16,27 @@
 # Reference to PresenceOnlyPredicton using arcpy:
 # https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-statistics/presence-only-prediction.htm
 
+"""
+FUNCTION getAllCombos(parameter_grid)
+    IMPORT itertools.product
+    COMPUTE all possible combinations using itertools.product
+    RETURN list of all combinations
+ENDFUNC
+
+FUNCTION checkModelLogs(log_path, params, s)
+    READ existing model logs from the file
+    IF model log for the current combination exists
+        RETURN True
+    ELSE
+        RETURN False
+    ENDIF
+ENDFUNC
+
+FUNCTION logModel(params, log_file)
+    APPEND current combination and its results to the log
+ENDFUNC
+"""
+
 
 # Import libraries/modules
 import itertools
@@ -26,7 +47,6 @@ import pickle
 from math import inf
 import os
 import json
-import gc
 
 def getPrecision(TP:float, FP:float) -> float:
     """
@@ -259,32 +279,22 @@ def runMaxEnt(static_params:dict,
     )
     return result
 
-def getMinMaxCellSize() -> dict:
-
-    input_rasters = arcpy.ListRasters()
-
-    # Get the cell sizes of all input rasters
-    cell_sizes = []
-    for raster_path in input_rasters:
-        raster = arcpy.Raster(raster_path)
-        cell_size_x = float(raster.meanCellWidth)
-        cell_size_y = float(raster.meanCellHeight)
-        cell_sizes.append((cell_size_x, cell_size_y))
-
-    # Find the minimum and maximum cell sizes
-    min_cell_size = min(min(cell_sizes))
-    max_cell_size = max(max(cell_sizes))
-    
-    return {"MIN":min_cell_size, "MAX":max_cell_size}
-
-
-
 
 def batchMaxEnt(species_df:pd.DataFrame, 
                 wspace:str, 
                 data_path:str,
                 explanatory_rasters:list,
-                nc_boundary:str) -> None:
+                nc_boundary:str,
+                # Define parameter settings to test
+                parameter_grid:dict = {
+                    "number_of_iterations": [10, 20],
+                    "basis_expansion_functions":["HINGE", "THRESHOLD"], # "PRODUCT", "LINEAR", "QUADRATIC"
+                    "relative_weight": [35, 50, 100],
+                    "number_knots":[10, 50], 
+                    "spatial_thinning": ["NO_THINNING"], # "THINNING"
+                    "link_function": ["CLOGLOG"], # "LOGISTIC"
+                    "thinning_distance_band": ["1000 Meters", "2500 Meters"] # "5000 Meters"
+                }) -> None:
     """
     Run the MaxEnt algorithm for presence-only species distribution modeling on a batch of species,
     given a dataframe of species information, a workspace path, and a data path. The function performs
@@ -300,6 +310,7 @@ def batchMaxEnt(species_df:pd.DataFrame,
                             name of the feature layer, and the second is either "true" or "false"
                             (indicating categorical or continuous data).
     - nc_boundary : boundary of North Carolina, to be used as the STUDY_POLYGON
+    - parameter_grid: dictionary of parameter values to iterate through (grid-search)
     """
     # Checks to confirm valid file paths
     if not os.path.exists(data_path):
@@ -331,8 +342,8 @@ def batchMaxEnt(species_df:pd.DataFrame,
         # Check if species already in gdb; If yes, just load model 
         if f"{s}_NC_Trained_Features" in arcpy.ListFeatureClasses():
             msg_str = f"Modeling already completed for {brd.name} for this project. " + \
-                      "To continue, please delete the trained features output by the model" + \
-                      "from the default geodatabase."
+                      f"To re-compute, please delete the trained features for {brd.name} " + \
+                      "output by the model from the default geodatabase."
             arcpy.AddMessage(msg_str)
             print(msg_str)
         else:
@@ -355,16 +366,6 @@ def batchMaxEnt(species_df:pd.DataFrame,
                 "allow_predictions_outside_of_data_ranges":"ALLOWED", 
                 "resampling_scheme":"RANDOM", 
                 "number_of_groups":5
-            }
-            # Define parameter settings to test
-            parameter_grid = {
-                "number_of_iterations": [10, 20],
-                "basis_expansion_functions":["HINGE", "LINEAR", "THRESHOLD", "QUADRATIC"], # "PRODUCT"
-                "relative_weight": [35, 50, 100],
-                "number_knots":[10, 50], 
-                "spatial_thinning": ["NO_THINNING", "THINNING"],
-                "link_function": ["CLOGLOG"], # "LOGISTIC"
-                "thinning_distance_band": ["1000 Meters", "2500 Meters"] # "5000 Meters"
             }
             
             # Get all combinations of parameters (# can vary depending on `spatial_thinning`)
@@ -462,10 +463,6 @@ def batchMaxEnt(species_df:pd.DataFrame,
             with open(os.path.join(model_data_path, f"{s}_model_data.pickle"), "rb") as f:
                 cached_model_data = pickle.load(f)
 
-            # Free up some memory using gc.collect() (Force garbage collect)
-            gc.collect()
-            # Set cell size to higher resolution (3x smaller than the max)
-            arcpy.env.cellSize = getMinMaxCellSize()["MAX"] / 3
             print(f"Outputting best model results for {s}, with trained raster cell size set to {arcpy.env.cellSize}")
             arcpy.AddMessage(f"Outputting best model results for {s}, with trained raster cell size set to {arcpy.env.cellSize}")
             # Update static cutoff to best model cutoff
@@ -484,7 +481,6 @@ def batchMaxEnt(species_df:pd.DataFrame,
                     output = True)
             print(f"Saved best model for {brd.name} to geodatabase.")
             arcpy.AddMessage(f"Saved best model for {brd.name} to geodatabase.")
-            arcpy.env.cellSize = "MAXOF"
 
     print("Finished presence-only prediction batch process")
     arcpy.AddMessage("Finished presence-only prediction batch process")

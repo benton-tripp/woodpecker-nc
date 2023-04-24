@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # Create File Geodatabase
     if not os.path.exists(DATA_PATH):
         os.makedirs(DATA_PATH)
-    arcpy.env.workspace = os.path.join(DB_PATH)
+    arcpy.env.workspace = DB_PATH
     print(f"Workspace set to {DB_PATH}")
     # Existing Feature Classes
     existing_fcs = arcpy.ListFeatureClasses()
@@ -109,7 +109,8 @@ if __name__ == "__main__":
     # Get Weather raster data; Aggregate in GDB
     avg_prec_data, min_temp_data, max_temp_data = getWeatherData(data_path=DATA_PATH, 
                                                                  wspace=DB_PATH,
-                                                                 nc_boundary=nc_boundary)
+                                                                 nc_boundary=nc_boundary,
+                                                                 coord_system=coord_system)
 
     ### Analyze ###
 
