@@ -1,3 +1,16 @@
+# Name: Benton Tripp
+# unity ID: btripp
+###################################################################################
+# 
+# birds.py
+#
+# This script provides a set of classes to manage bird species data extracted from
+# FeederWatch dataframes. The Species class organizes raw FeederWatch data into
+# human-understandable metadata, while the Bird class, a subclass of Species,
+# creates bird objects with formatted feature class name attributes.
+
+
+# Import libraries
 import pandas as pd
 import numpy as np
 import re

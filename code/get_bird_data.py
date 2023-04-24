@@ -1,18 +1,46 @@
+# Name: Benton Tripp
+# unity ID: btripp
+###################################################################################
+# 
+# get_bird_data.py
+#
+# Function 1: getSpeciesCodes
+# Queries the Species Codes sheet from the FeederWatch Data Dictionary and
+# returns a pandas dataframe of species (Fields: species_code, species_name, family)
+
+# Function 2: cleanFeederWatchData
+# Cleans the FeederWatch data, filtering by valid data, specified birds, and
+# specified locations. Returns a subset of the original data input, with cleaned field names.
+
+# Function 3: getFeedWatcherData
+# Gets FeederWatch data from website, cleans/ filters data using `cleanFeederWatchData()`,
+# and concatenates and saves the final output to a .csv file. Returns a pandas dataframe
+# of the selected FeederWatch bird data.
+#
+# Data from https://feederwatch.org/explore/raw-dataset-requests/
+# 
+
 # import libraries
 import pandas as pd
 import numpy as np
 import os
 import arcpy
 
-# Data from https://feederwatch.org/explore/raw-dataset-requests/
-
 def getSpeciesCodes(data_path:str) -> pd.DataFrame:
     """
-    This function queries the Species Codes sheet from the FeederWatch Data Dictionary. The
-    data is available through an excel sheet provided in the data website. This data will be 
-    used to access the corresponding names and families of the different species codes.
-    Returns a pandas dataframe of species (Fields: species_code, species_name, family)
+    Queries the Species Codes sheet from the FeederWatch Data Dictionary and returns a pandas 
+    dataframe of species (Fields: species_code, species_name, family). The data is available 
+    through an excel sheet provided on the data website. This data will be used to access the 
+    corresponding names and families of the different species codes.
+    Args
+    - data_path : The file path to the folder where the species_codes.csv will be saved.
+    Output
+    A pandas dataframe containing species codes, names, and families.
     """
+    # Checks to confirm valid file path
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Data path '{data_path}' not found.")
+    
     print("Getting Species codes...")
     arcpy.AddMessage("Getting Species codes...")
     out_file_name = "species_codes.csv"

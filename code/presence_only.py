@@ -1,4 +1,23 @@
+# Name: Benton Tripp
+# unity ID: btripp
+###################################################################################
+# 
+# presence_only.py
+# 
+# This script performs presence-only species distribution modeling using the MaxEnt algorithm for a list of bird species
+# in North Carolina. The script reads species occurrence data from a pandas DataFrame, generates a set of potential
+# parameter combinations for the MaxEnt model, and performs a grid search to find the best combination of parameters
+# based on the F1 score. The best performing model for each species is saved to a geodatabase, along with related output
+# data, such as trained features, response curves, and sensitivity tables.
+# 
+# The script makes use of the arcpy library to interact with geospatial data and perform geoprocessing tasks. It also
+# uses the pandas library for data manipulation and os, pickle, and itertools for file and data handling.
+# 
+# Reference to PresenceOnlyPredicton using arcpy:
 # https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-statistics/presence-only-prediction.htm
+
+
+# Import libraries/modules
 import itertools
 import arcpy 
 import pandas as pd
@@ -6,22 +25,45 @@ from birds import Bird
 import pickle
 from math import inf
 import os
-from datetime import datetime
 import json
+import gc
 
 def getPrecision(TP:float, FP:float) -> float:
+    """
+    Calculates the precision measurement given the True/False positive inputs
+    Args
+    - TP : True Positive
+    - FP : False Positive 
+    Output
+    - float value of precision (-inf if zero division error)
+    """
     try:
         return TP / (TP + FP)
     except ZeroDivisionError:
         return -inf
 
 def getF1(TP:float, FP:float, recall:float) -> float:
+    """
+    Calculates the F1 Score given the True/False positive and Recall inputs.
+    Used in `scoreFromSensitivityTable` function
+    Args
+    - TP : True Positive
+    - FP : False Positive 
+    - Recall : recall measurement
+    Output
+    - float value of F1 score (-inf if zero division error)
+    """
     try:
         return 2 * ((TP / (TP + FP)) * recall) / ((TP / (TP + FP)) + recall)
     except ZeroDivisionError:
         return -inf
 
 def scoreFromSensitivityTable(sensitivity_table: str) -> float:
+    """
+    Computes the F1 score of a model from the output values within the sensitivity table
+    Args
+    - sensitivity_table : name of sensitivity table in the GDB
+    """
     # field_names = [field.name for field in arcpy.ListFields(sensitivity_table)]
     with arcpy.da.SearchCursor(sensitivity_table, 
                             ['CUTOFF', 'FPR', 'TPR', 'FNR', 'TNR', 'SENSE', 'SPEC']) as cursor:
@@ -42,20 +84,85 @@ def scoreFromSensitivityTable(sensitivity_table: str) -> float:
     df = pd.DataFrame.from_dict(vals)
     return(df)
 
+# Log model parameters after they are trained
+def logModel(params:dict, log_file:str) -> None:
+    """
+    Logs the parameters used to train a model. The workflow is structured such that
+    a log_file will correspond to each species of bird, and the logged parameters
+    are those in the `parameter_grid` dictionary along with the best F1 score and 
+    corresponding cutoff value. A new file will be created if it doesn't already
+    exist. Logs are dictionary values saved in a json file, each respectively 
+    appended to a list.
+    Args
+    - params : The parameter dictionary
+    - log_file : The path/file where the log should be dumped
+    """
+    # If the file doesn't exist, create it with an empty list
+    if not os.path.isfile(log_file):
+        with open(log_file, "w") as f:
+            json.dump([], f)
+
+    # Read the existing content
+    with open(log_file, "r") as f:
+        content = json.load(f)
+
+    # Append the new parameters
+    content.append(params)
+
+    # Write the updated content back to the file
+    with open(log_file, "w") as f:
+        json.dump(content, f)
+
+def checkModelParams(file_dict:dict, params:dict) -> bool:
+    """
+    Used in `checkModelLogs`; Iterates through the each of the logged parameters in a given
+    log file. If all of the values in the input parameters are equal to the respective 
+    parameters in the log file, and there are the same parameters in each (with the 
+    exception of f1 & cutoff), return True; Otherwise False.
+    Args
+    - file_dict : path/name for log file with logged parameters for a given species
+    - params : dictionary of parameters to be compared with log file values
+    Output
+    - Boolean confirming whether or not the input parameters were already completed for the 
+      given species
+    """
+    for p in file_dict:
+        if all(params[key] == p[key] for key in params if key in p):
+            if all(k in params.keys() for k in [k_ for k_ in p if k_ != "f1" and k_ != "cutoff"]):
+                return True
+    return False
+
 # Check if model already run previously
 def checkModelLogs(log_path:str, params:dict, species:str) -> bool:
+    """
+    Check if a model with the given parameter settings has already been run for the given species.
+    Args
+    - log_path : A file path to the directory containing model log files.
+    - params : A dictionary of model parameters.
+    - species_name : The formatted name of the species.
+    Output
+    - True if a model with the given parameters has already been run for the species, False otherwise.
+    """
     files = [f for f in os.listdir(log_path) if species in f]
     for file in files:
         file_path = os.path.join(log_path, file)
         with open(file_path, 'r') as f:
             file_dict = json.load(f)
-            del file_dict["f1"]
-            del file_dict["cutoff"]
-            if file_dict == params:
+            if checkModelParams(file_dict, params):
                 return False
     return True
 
+
 def getAllCombos(parameter_grid:dict) -> dict:
+    """
+    Generate a list of all possible combinations of parameter values given a dictionary of
+    parameter names and their corresponding lists of values.
+    Args
+    - parameter_grid : A dictionary where keys are parameter names and values 
+                       are lists of possible parameter values.
+    Output
+    A list of tuples, where each tuple represents a unique combination of parameter values.
+    """
     # Generate all combinations of parameters
     if "NO_THINNING" not in parameter_grid["spatial_thinning"]:
         all_combinations = list(itertools.product(*parameter_grid.values()))
@@ -97,7 +204,19 @@ def getAllCombos(parameter_grid:dict) -> dict:
         all_combinations = no_thinning_combinations + thinning_combinations
     return all_combinations
 
-def runMaxEnt(static_params:dict, params:dict, outputs:dict, output:bool = False) -> arcpy.stats.PresenceOnlyPrediction:
+def runMaxEnt(static_params:dict, 
+              params:dict, 
+              outputs:dict, 
+              output:bool = False) -> arcpy.stats.PresenceOnlyPrediction:
+    """
+    Run the MaxEnt algorithm for species distribution modeling using the given static parameters,
+    dynamic parameters, and output file names.
+    Args
+    - static_params : A dictionary of non-changing parameters for the MaxEnt algorithm.
+    - params : A dictionary of dynamic parameters to be tested in the MaxEnt algorithm.
+    - outputs : A dictionary of output file names for the MaxEnt algorithm.
+    - output : A flag indicating whether to save the model output to the workspace. Defaults to False.
+    """
     if not output:
         for k in outputs.keys():
             if k != "output_sensitivity_table":
@@ -140,8 +259,56 @@ def runMaxEnt(static_params:dict, params:dict, outputs:dict, output:bool = False
     )
     return result
 
-def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
+def getMinMaxCellSize() -> dict:
+
+    input_rasters = arcpy.ListRasters()
+
+    # Get the cell sizes of all input rasters
+    cell_sizes = []
+    for raster_path in input_rasters:
+        raster = arcpy.Raster(raster_path)
+        cell_size_x = float(raster.meanCellWidth)
+        cell_size_y = float(raster.meanCellHeight)
+        cell_sizes.append((cell_size_x, cell_size_y))
+
+    # Find the minimum and maximum cell sizes
+    min_cell_size = min(min(cell_sizes))
+    max_cell_size = max(max(cell_sizes))
+    
+    return {"MIN":min_cell_size, "MAX":max_cell_size}
+
+
+
+
+def batchMaxEnt(species_df:pd.DataFrame, 
+                wspace:str, 
+                data_path:str,
+                explanatory_rasters:list,
+                nc_boundary:str) -> None:
+    """
+    Run the MaxEnt algorithm for presence-only species distribution modeling on a batch of species,
+    given a dataframe of species information, a workspace path, and a data path. The function performs
+    a grid search to find the optimal set of parameters for each species model and outputs the best
+    model's results to the geodatabase.
+    Args
+    - species_df : A pandas DataFrame containing species information.
+    - wspace : A file path to the working directory/GDB
+    - data_path : A file path to the data directory
+    - explanatory_rasters : list of rasters saved in GDB to be used as input explanatory rasters;
+                            they should be stored in a nested list format, with each inner list 
+                            being a length of two. The first item in each "inner list" is the 
+                            name of the feature layer, and the second is either "true" or "false"
+                            (indicating categorical or continuous data).
+    - nc_boundary : boundary of North Carolina, to be used as the STUDY_POLYGON
+    """
+    # Checks to confirm valid file paths
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Data path '{data_path}' not found.")
+    if not os.path.exists(wspace):
+        raise FileNotFoundError(f"Workspace path '{wspace}' not found.")
+    
     print("Starting batch presence-only predictions...")
+    arcpy.AddMessage("Starting batch presence-only predictions...")
     # Set workspace
     arcpy.env.workspace = wspace
     # Temporarily enable overwriting data
@@ -159,12 +326,15 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
         brd = Bird(species_df, species_name)
         s = brd.formatted_name
         print(f"Modeling {brd.name} distribution in NC using the MaxEnt algorithm...")
+        arcpy.AddMessage(f"Modeling {brd.name} distribution in NC using the MaxEnt algorithm...")
         
         # Check if species already in gdb; If yes, just load model 
         if f"{s}_NC_Trained_Features" in arcpy.ListFeatureClasses():
-            print("Modeling already completed for {brd.name} for this project. " + \
-                  "To continue, please delete the trained features output by the model" + \
-                  "from the default geodatabase.")
+            msg_str = f"Modeling already completed for {brd.name} for this project. " + \
+                      "To continue, please delete the trained features output by the model" + \
+                      "from the default geodatabase."
+            arcpy.AddMessage(msg_str)
+            print(msg_str)
         else:
             # Non-changing parameters (written out so that they can be saved)
             static_params = {
@@ -174,13 +344,9 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                 "presence_indicator_field":None,
                 "distance_features":None, 
                 # T/F -> categorical/continuous
-                "explanatory_rasters":[["nc_nlcd2019", "true"],
-                                    ["nc250", "false"],
-                                    ["avgPrecip_all_years", "false"],
-                                    ["minTemp_all_years", "false"],
-                                    ["maxTemp_all_years", "false"]],
+                "explanatory_rasters":explanatory_rasters,
                 "study_area_type":"STUDY_POLYGON",
-                "study_area_polygon":"nc_state_boundary", 
+                "study_area_polygon":nc_boundary, 
                 "presence_probability_cutoff":0.5, 
                 "features_to_predict":None, 
                 "explanatory_variable_matching":None, 
@@ -208,8 +374,11 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
             files = os.listdir(model_data_path)
             if f"{s}_model_data.pickle" in files:
                 # Read from previously saved model
-                with open(os.path.join(model_data_path, f"{s}_model_data.pickle"), "rb") as f:
-                    cached_model_data = pickle.load(f)
+                try:
+                    with open(os.path.join(model_data_path, f"{s}_model_data.pickle"), "rb") as f:
+                        cached_model_data = pickle.load(f)
+                except IOError as e:
+                    print(f"Error reading the file: {e}")
                 best_combination = cached_model_data["combination"]
                 best_evaluation_metric = cached_model_data["f1"]
             else:
@@ -233,8 +402,10 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                     }
 
                     print(f"Training model for {brd.name} with combination [{i}/{len(all_combinations)}]:")
+                    arcpy.AddMessage(f"Training model for {brd.name} with combination [{i}/{len(all_combinations)}]:")
                     for k, v in zip(params.keys(), params.values()):
                         print(f"{k}: {v}")
+                        arcpy.AddMessage(f"{k}: {v}")
 
                     # Run MaxEnt with the current set of parameters
                     runMaxEnt(static_params, params, outputs, output = False)
@@ -248,22 +419,24 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                     f1 = max(score.f1)
                     max_f1_index = score.f1.idxmax()
                     cutoff = score.loc[max_f1_index, 'cutoff']
-                    print("===============================")
-                    print(f"{brd.name} Combination {i} results:")
-                    print("-------------------------------")
-                    print(f"Max F1: {round(f1, 4)}")
-                    print(f"Best Cutoff: {round(cutoff, 2)}")
-                    print("===============================")
+                    msg_str = "===============================\n" + \
+                              f"{brd.name} Combination {i} results:\n" + \
+                              "-------------------------------\n" + \
+                              f"Max F1: {round(f1, 4)}\n" + \
+                              f"Best Cutoff: {round(cutoff, 2)}\n" + \
+                              "==============================="
+                    print(msg_str)
+                    arcpy.AddMessage(msg_str)
 
                     # Write model logs
                     params.update({"f1":f1, "cutoff":round(cutoff, 2)})
-                    log_file = os.path.join(log_path, f"{s}_model_log" + datetime.now().strftime('%Y%m%d%H%M%S') + ".log")
-                    with open(log_file, "w") as f:
-                        json.dump(params, f)
+                    log_file = os.path.join(log_path, f"{s}_model_log.json")
+                    logModel(params, log_file)
 
                     # Compare the current F1 score with the best one found so far
                     if f1 > best_evaluation_metric:
                         print(f"Updating results of combination {i} to champion model for {brd.name}...")
+                        arcpy.AddMessage(f"Updating results of combination {i} to champion model for {brd.name}...")
                         best_evaluation_metric = f1
                         best_combination = combination
                         # Save model data to a pickle file
@@ -283,10 +456,18 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                             pickle.dump(model_data, f)
 
             print(f"Best model for {brd.name}: {best_combination}, {best_evaluation_metric}")
+            arcpy.AddMessage(f"Best model for {brd.name}: {best_combination}, {best_evaluation_metric}")
 
             # Output model results to project
             with open(os.path.join(model_data_path, f"{s}_model_data.pickle"), "rb") as f:
                 cached_model_data = pickle.load(f)
+
+            # Free up some memory using gc.collect() (Force garbage collect)
+            gc.collect()
+            # Set cell size to higher resolution (3x smaller than the max)
+            arcpy.env.cellSize = getMinMaxCellSize()["MAX"] / 3
+            print(f"Outputting best model results for {s}, with trained raster cell size set to {arcpy.env.cellSize}")
+            arcpy.AddMessage(f"Outputting best model results for {s}, with trained raster cell size set to {arcpy.env.cellSize}")
             # Update static cutoff to best model cutoff
             cached_model_data["presence_probability_cutoff"] = round(cached_model_data["cutoff"], 2)
             runMaxEnt(
@@ -302,7 +483,10 @@ def batchMaxEnt(species_df:pd.DataFrame, wspace:str, data_path:str) -> None:
                     }, 
                     output = True)
             print(f"Saved best model for {brd.name} to geodatabase.")
+            arcpy.AddMessage(f"Saved best model for {brd.name} to geodatabase.")
+            arcpy.env.cellSize = "MAXOF"
 
     print("Finished presence-only prediction batch process")
+    arcpy.AddMessage("Finished presence-only prediction batch process")
     # Disable overwriting data
     arcpy.env.overwriteOutput = False

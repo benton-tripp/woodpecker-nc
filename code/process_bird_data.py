@@ -1,3 +1,15 @@
+# Name: Benton Tripp
+# unity ID: btripp
+###################################################################################
+# 
+# process_bird_data.py
+# 
+# This script contains a function to batch process bird data from FeederWatch. The
+# processing steps include creating a feature class from the CSV file, adding a
+# projection, filtering by species, and saving individual species as separate feature
+# classes in the geodatabase.
+
+# Import libraries/modules
 import os
 import arcpy
 import pandas as pd
@@ -11,6 +23,7 @@ def batchBirdProcessing(fw_file:str,
                         wspace:str,
                         fw_df:pd.DataFrame,
                         species_df:pd.DataFrame,
+                        nc_boundary:str,
                         _prefix:str = "FW_") -> None:
     """
     Batch processing of FeederWatch bird data. 
@@ -29,7 +42,17 @@ def batchBirdProcessing(fw_file:str,
     - data_path: Path to feederwatch data
     - fw_df: FeederWatch dataframe
     - species_df: Species dataframe
+    - nc_boundary: North Carolina State boundary to be used as the study area
     """
+    # Checks to confirm valid file paths
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"Data path '{data_path}' not found.")
+    if not os.path.exists(wspace):
+        raise FileNotFoundError(f"Workspace path '{wspace}' not found.")
+    fw_file = os.path.join(data_path, fw_file)
+    if not os.path.exists(fw_file):
+        raise FileNotFoundError(f"Data path '{fw_file}' not found.")
+
     print("Starting batch processing of bird data prior to analysis...")
     arcpy.AddMessage("Starting batch processing of bird data prior to analysis...")
 
@@ -38,7 +61,7 @@ def batchBirdProcessing(fw_file:str,
     # Create base feature class
     if f"{base_fc}_NC" not in existing_fcs:
         
-        arcpy.management.XYTableToPoint(in_table=os.path.join(data_path, fw_file),
+        arcpy.management.XYTableToPoint(in_table=fw_file,
                                         out_feature_class=base_fc,
                                         x_field="longitude", 
                                         y_field="latitude")
@@ -47,7 +70,7 @@ def batchBirdProcessing(fw_file:str,
 
         arcpy.SelectLayerByLocation_management(f"{base_fc}_projected", 
                                                "INTERSECT", 
-                                               "nc_state_boundary")
+                                               nc_boundary)
         
         arcpy.CopyFeatures_management(f"{base_fc}_projected", 
                                       f"{base_fc}_NC")
@@ -63,8 +86,8 @@ def batchBirdProcessing(fw_file:str,
             print(f'Adding {brd.name} to gdb...')
             arcpy.AddMessage(f'Adding {brd.name} to gdb...')
             arcpy.analysis.Select(f"{base_fc}_NC", 
-                                brd.fc_name, 
-                                f"species_name = '{brd.name}'")
+                                  brd.fc_name, 
+                                  f"species_name = '{brd.name}'")
     
     print("Finished batch processing of bird data prior to analysis")
     arcpy.AddMessage("Finished batch processing of bird data prior to analysis")
