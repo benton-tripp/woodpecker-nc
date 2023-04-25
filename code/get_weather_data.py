@@ -16,30 +16,28 @@
 # 5. Trims the raster data to the North Carolina boundary and saves them to the workspace.
 # 6. Deletes unneeded rasters from the workspace.
 # 7. Returns the names of the aggregated rasters as a list of strings.
-
-### Pseudocode #####
-"""
-FUNCTION getRastersFromDir(variables, periods, output path)
-    SET empty list for storing arcpy.Raster objects
-    FOR each period in periods
-        CONSTRUCT arcpy.Raster object with the period and variable
-        ADD arcpy.Raster object to the list
-    ENDFOR
-    RETURN list of arcpy.Raster objects
-ENDFUNC
-
-FUNCTION getWeatherData(data path, workspace, NC Boundary, Coordinate System, 
-                        Avg. Prec. Output Name, Min. Temp. Output Name, 
-                        Max. Temp. Output Name)
-    CHECK if data_path exists, otherwise RAISE FileNotFoundError
-    CHECK if wspace exists, otherwise RAISE FileNotFoundError
-    SET workspace
-    GET raster data
-    PROCESS data and add to GDB
-    DELETE unneeded rasters
-    RETURN list of aggregated raster layer names
-ENDFUNC
-"""
+#
+### Simple Pseudocode #####
+# FUNCTION getRastersFromDir(variables, periods, output path)
+#     SET empty list for storing arcpy.Raster objects
+#     FOR each period in periods
+#         CONSTRUCT arcpy.Raster object with the period and variable
+#         ADD arcpy.Raster object to the list
+#     ENDFOR
+#     RETURN list of arcpy.Raster objects
+# ENDFUNC
+# 
+# FUNCTION getWeatherData(data path, workspace, NC Boundary, Coordinate System, 
+#                         Avg. Prec. Output Name, Min. Temp. Output Name, 
+#                         Max. Temp. Output Name)
+#     CHECK if data_path exists, otherwise RAISE FileNotFoundError
+#     CHECK if wspace exists, otherwise RAISE FileNotFoundError
+#     SET workspace
+#     GET raster data
+#     PROCESS data and add to GDB
+#     DELETE unneeded rasters
+#     RETURN list of aggregated raster layer names
+# ENDFUNC
 
 
 # Import libraries

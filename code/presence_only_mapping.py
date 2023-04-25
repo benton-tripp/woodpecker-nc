@@ -25,7 +25,7 @@ import os
 import pandas as pd
 from birds import Bird
 
-def hex_to_rgb(hex_color:str) -> tuple:
+def hexToRGB(hex_color:str) -> tuple:
     """
     Convert Hexidecimal Color to RGB
     Args
@@ -36,7 +36,7 @@ def hex_to_rgb(hex_color:str) -> tuple:
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-def create_map_and_export(project_path:str, 
+def createMapAndExport(project_path:str, 
                           wspace:str, 
                           brd_rasters:dict, 
                           output_folder:str) -> None:
@@ -79,7 +79,7 @@ def create_map_and_export(project_path:str,
         classified_layer[0].visible = True
 
         # Define colors for symbology
-        colors = ['#F6FCE1', '#CFD6B4', '#F5CA7A', '#DDAF5B', '#9C5B00']
+        colors = ['#F6FCE1', '#CFD6B4', '#F5CA7A', '#CBA154', '#9C5B00']
         rgb_colors = [hex_to_rgb(color) for color in colors]
 
         # Set the symbology and labels for the classified raster layer
@@ -136,11 +136,11 @@ def create_map_and_export(project_path:str,
     project.save()
 
 
-def output_maps(species_df:pd.DataFrame, 
-                project_path:str, 
-                wspace:str, 
-                data_path:str, 
-                output_folder:str) -> None:
+def outputMaps(species_df:pd.DataFrame, 
+               project_path:str, 
+               wspace:str, 
+               data_path:str, 
+               output_folder:str) -> None:
     """
     Organizes and generates maps for each bird species.
     Args

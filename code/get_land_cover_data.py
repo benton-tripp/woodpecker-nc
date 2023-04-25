@@ -57,10 +57,11 @@ def getLandCoverData(data_path:str,
         # "https://drive.google.com/uc?id=1555Ox4664hH0kFlakGQwi1nzxrMcC61o&confirm=t&uuid=0edbf032-c3ba-45fe-b111-c3752b7cf8ae&at=ALgDtsw-mvJqXBLq4JMNZJ-5g2b7:1676943369421"
         
         # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
-        # (see https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
+        # (see blog post at https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
         with urlopen(zipurl) as zipresp:
             with ZipFile(BytesIO(zipresp.read())) as zfile:
                 zfile.extractall(raster_path)
+        # End Credit
         
         if "NC_NLCD2019only.zip" in os.listdir():
             print("NC_NLCD2019only.zip...")

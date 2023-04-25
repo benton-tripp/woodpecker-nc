@@ -16,27 +16,6 @@
 # Reference to PresenceOnlyPredicton using arcpy:
 # https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-statistics/presence-only-prediction.htm
 
-"""
-FUNCTION getAllCombos(parameter_grid)
-    IMPORT itertools.product
-    COMPUTE all possible combinations using itertools.product
-    RETURN list of all combinations
-ENDFUNC
-
-FUNCTION checkModelLogs(log_path, params, s)
-    READ existing model logs from the file
-    IF model log for the current combination exists
-        RETURN True
-    ELSE
-        RETURN False
-    ENDIF
-ENDFUNC
-
-FUNCTION logModel(params, log_file)
-    APPEND current combination and its results to the log
-ENDFUNC
-"""
-
 
 # Import libraries/modules
 import itertools

@@ -57,14 +57,13 @@ def getDEMData(data_path:str,
         print(f"Downloading DEM Data from {url}...")
         arcpy.AddMessage(f"Downloading DEM Data from {url}...")
         zip_file_name = "nc250.zip"
-        # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
-        # (see https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
-        # Download the zip file from the URL
-        urllib.request.urlretrieve(url, zip_file_name)
         # Extract the contents of the zip file to a directory named `dem_path` (var)
+        # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
+        # (see blog post at https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
+        urllib.request.urlretrieve(url, zip_file_name)
         with zipfile.ZipFile(zip_file_name, 'r') as zip_ref:
             zip_ref.extractall(dem_path)
-    
+        # End Credit
     if "nc250.zip" in os.listdir():
         print("Removing nc250.zip...")
         arcpy.AddMessage("Removing nc250.zip...")
