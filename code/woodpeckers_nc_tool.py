@@ -28,6 +28,7 @@ from get_land_cover_data import getLandCoverData
 from get_weather_data import getWeatherData
 from process_bird_data import batchBirdProcessing
 from presence_only import batchMaxEnt
+from presence_only_mapping import outputMaps
 
 # Define variables 
 proj = arcpy.mp.ArcGISProject('CURRENT')
@@ -148,5 +149,13 @@ if __name__ == "__main__":
                 explanatory_rasters=explanatory_rasters,
                 nc_boundary=nc_boundary,
                 parameter_grid=PARAMETER_GRID)
+    
+    ### Mapping ##########
+
+    outputMaps(NC_WOODPECKERS, 
+               project_path=PROJ_PATH, 
+               wspace=DB_PATH, 
+               data_path=DATA_PATH, 
+               output_folder=PDF_OUTPUT_LOCATION)
 
 

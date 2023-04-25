@@ -190,16 +190,4 @@ def outputMaps(species_df:pd.DataFrame,
     createMapAndExport(project_path, wspace, brd_rasters, output_folder)
 
 
-# with open("data/species_df.pickle", "wb") as f:
-#   pickle.dump(NC_WOODPECKERS, f)
 
-import pickle
-
-with open("data/species_df.pickle", "rb") as f:
-    species_df = pickle.load(f)
-
-outputMaps(species_df, 
-           project_path="woodpeckerNC.aprx", 
-           wspace="woodpeckerNC.gdb", 
-           data_path="data", 
-           output_folder="maps")
