@@ -19,7 +19,7 @@
 import sys
 import os
 import arcpy
-from get_bird_data import getSpeciesCodes, getFeedWatcherData
+from get_bird_data import getSpeciesCodes, getFeederWatchData
 from get_nc_boundary import getNCBoundary
 from get_dem_data import getDEMData
 from get_land_cover_data import getLandCoverData
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Woodpecker Family
     WOODPECKERS = SPECIES.loc[SPECIES['family'] == 'Picidae (Woodpeckers)']
 
-    fw = getFeedWatcherData(outfile=FW_FILE,
+    fw = getFeederWatchData(outfile=FW_FILE,
                             tfs=DATA_TIMEFRAMES,
                             birds=WOODPECKERS,
                             sub_national_code=['US-NC'],

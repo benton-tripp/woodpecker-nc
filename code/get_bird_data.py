@@ -48,13 +48,14 @@ def getSpeciesCodes(data_path:str) -> pd.DataFrame:
     if out_file_name in os.listdir(data_path):
         species = pd.read_csv(outFile)
     else:
-        # First, set up the url for the data dictionary (Google Drive).
         # Credit goes to the following StackOverflow answer for re-formatting the url:
         # https://stackoverflow.com/questions/56611698/pandas-how-to-read-csv-file-from-google-drive-public
+        # First, set up the url for the data dictionary (Google Drive).
         url = 'https://drive.google.com/file/d/1kHmx2XhA2MJtEyTNMpwqTQEnoa9M7Il2/view?usp=sharing'
         url = 'https://drive.google.com/uc?id=' + url.split('/')[-2]
         # Read the Excel Sheet with the Species Codes
         species = pd.read_excel(url, sheet_name='Species Codes', header=1)
+        # End credit
         # Filter and rename columns
         species = species[['SPECIES_CODE', 'PRI_COM_NAME_INDXD', 'FAMILY']]\
             .rename(columns={'SPECIES_CODE':'species_code', 
@@ -106,7 +107,7 @@ def cleanFeederWatchData(data:pd.DataFrame,
     # Return, Ensuring correct order, specific output columns, sorted
     return data[out_names].sort_values(by=['date', 'species_name'], ascending=[True, True])
 
-def getFeedWatcherData(outfile:str,
+def getFeederWatchData(outfile:str,
                        tfs:list, 
                        birds:pd.DataFrame, 
                        sub_national_code:list=[], 

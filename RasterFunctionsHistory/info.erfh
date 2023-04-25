@@ -1,0 +1,67 @@
+{
+  "version" : 1,
+  "name" : "Raster Functions History",
+  "historyItems" : [
+    {
+      "id" : "{38B1A297-A8EF-4788-ADB7-E1EC690DF689}",
+      "type" : 1,
+      "status" : 4,
+      "name" : "Raster Function Color Template",
+      "description" : "Maps colors to categories",
+      "rftPath" : "Raster Function Color Template_{38B1A297-A8EF-4788-ADB7-E1EC690DF689}.rft.xml",
+      "startTime" : "638180302670000000",
+      "endTime" : "638180302670000000",
+      "validationMessages" : [
+        "The dataset variable 'Raster' is not assigned."
+      ],
+      "remoteJobStateInfo" : {
+        "ID" : "_lcljob",
+        "Status" : 5,
+        "ReturnValue" : "",
+        "Messages" : [
+          {
+            "Text" : "Submitted.",
+            "Type" : 0
+          },
+          {
+            "Text" : "Executing...",
+            "Type" : 0
+          },
+          {
+            "Text" : "Failed.",
+            "Type" : 100
+          }
+        ]
+      }
+    },
+    {
+      "id" : "{6EF8A960-FA7C-4344-82B2-5519FA188CBE}",
+      "type" : 1,
+      "status" : 2,
+      "name" : "Raster Function Color Template",
+      "description" : "Maps colors to categories",
+      "rftPath" : "Raster Function Color Template_{6EF8A960-FA7C-4344-82B2-5519FA188CBE}.rft.xml",
+      "startTime" : "638180302880000000",
+      "endTime" : "638180302880000000",
+      "remoteJobStateInfo" : {
+        "ID" : "_lcljob",
+        "Status" : 5,
+        "ReturnValue" : "",
+        "Messages" : [
+          {
+            "Text" : "Submitted.",
+            "Type" : 0
+          },
+          {
+            "Text" : "Executing...",
+            "Type" : 0
+          },
+          {
+            "Text" : "Succeeded.",
+            "Type" : 0
+          }
+        ]
+      }
+    }
+  ]
+}

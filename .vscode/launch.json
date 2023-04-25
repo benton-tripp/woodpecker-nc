@@ -9,9 +9,9 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/code/test.py",
+            "program": "${workspaceFolder}/code/presence_only_mapping.py",
             "console": "integratedTerminal",
-            "args": ["woodpeckerNC.aprx"]
+            "args": [] //"woodpeckerNC.aprx"
         }
     ]
 }

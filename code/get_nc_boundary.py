@@ -45,8 +45,6 @@ def getNCBoundary(data_path:str,
     nc_shp_file = os.path.join(nc_shp_path, "tl_2018_37_cousub.shp")
     os.makedirs(nc_shp_path, exist_ok=True)
     if not os.path.exists(nc_shp_file):
-        # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
-        # (see https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
         nc_shp_url = "https://www2.census.gov/geo/tiger/TIGER2018/COUSUB/tl_2018_37_cousub.zip"
         arcpy.AddMessage(f"Downloading NC State Boundary shapefile from {nc_shp_url}...")
         print(f"Downloading NC State Boundary shapefile from {nc_shp_url}...")

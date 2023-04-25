@@ -24,6 +24,7 @@ import arcpy
 import os
 import pandas as pd
 from birds import Bird
+import locale
 
 def hexToRGB(hex_color:str) -> tuple:
     """
@@ -34,12 +35,15 @@ def hexToRGB(hex_color:str) -> tuple:
     Tuple with RGB Value
     """
     hex_color = hex_color.lstrip('#')
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    return list(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) + [100]
+
+
 
 def createMapAndExport(project_path:str, 
-                          wspace:str, 
-                          brd_rasters:dict, 
-                          output_folder:str) -> None:
+                       wspace:str, 
+                       brd_rasters:dict, 
+                       output_folder:str,
+                       colors:list=['#F6FCE1', '#CFD6B4', '#F5CA7A', '#D98754']) -> None:
     """
     Creates and exports maps for the modeled distribution of each bird species.
     Args
@@ -47,6 +51,7 @@ def createMapAndExport(project_path:str,
     - wspace : The workspace location for the raster layers.
     - brd_rasters : The bird/raster name key/value pairs.
     - output_folder : The output folder location for the PDFs.
+    - colors : list of 5 hexidecimal color values
     """
         
     # Set workspace
@@ -54,62 +59,54 @@ def createMapAndExport(project_path:str,
 
     # Define project
     project = arcpy.mp.ArcGISProject(project_path)
+    arcpy.env.overwriteOutput = True
+    arcpy.env.resamplingMethod = "CUBIC"
 
     # Loop through each trained raster
     for raster in brd_rasters.keys():
         # Get species name
         species_name = brd_rasters[raster]
         print(f"Adding {species_name} raster layer to map...")
-        # Create a raster layer from the raster
-        raster_layer = arcpy.MakeRasterLayer_management(raster, raster + "_Lyr")
 
-        # Apply manual symbology
-        remap = arcpy.sa.RemapRange([[0, 0.2, 1],
-                                      [0.2, 0.4, 2],
-                                      [0.4, 0.6, 3],
-                                      [0.6, 0.8, 4],
-                                      [0.8, 1.0, 5]])
-
-        classified_raster = arcpy.sa.Reclassify(raster_layer, "Value", remap, "NODATA")
-        classified_raster.save(os.path.join(wspace, raster + "_classified"))
-
-        classified_layer = arcpy.MakeRasterLayer_management(os.path.join(wspace, raster + "_classified"), 
-                                                            raster + "_classified_Lyr")
-        m.addLayer(classified_layer[0])
-        classified_layer[0].visible = True
-
-        # Define colors for symbology
-        colors = ['#F6FCE1', '#CFD6B4', '#F5CA7A', '#CBA154', '#9C5B00']
-        rgb_colors = [hex_to_rgb(color) for color in colors]
-
-        # Set the symbology and labels for the classified raster layer
-        sym = classified_layer[0].symbology
-        sym.updateColorizer('Classify')
-        sym.renderer.classificationMethod = 'Manual'
-        sym.renderer.breakCount = 5
-
-        sym.renderer.breaks[0].label = '0-0.2'
-        sym.renderer.breaks[0].color = {'RGB': rgb_colors[0]}
-
-        sym.renderer.breaks[1].label = '0.2-0.4'
-        sym.renderer.breaks[1].color = {'RGB': rgb_colors[1]}
-
-        sym.renderer.breaks[2].label = '0.4-0.6'
-        sym.renderer.breaks[2].color = {'RGB': rgb_colors[2]}
-
-        sym.renderer.breaks[3].label = '0.6-0.8'
-        sym.renderer.breaks[3].color = {'RGB': rgb_colors[3]}
-
-        sym.renderer.breaks[4].label = '0.8-1.0'
-        sym.renderer.breaks[4].color = {'RGB': rgb_colors[4]}
-
-        classified_layer[0].symbology = sym
-        
         # Create a new map and add it to the project
         m = project.listMaps("Map")[0]
-        m.addLayer(classified_layer[0])
-        classified_layer[0].visible = True
+        
+        # Check if raster + "_Lyr" already exists in the map and remove it
+        for lyr in m.listLayers():
+            if lyr.name == raster + "_Lyr":
+                m.removeLayer(lyr)
+                break
+        
+        # Create a raster layer from the raster
+        raster_layer = arcpy.MakeRasterLayer_management(raster, raster + "_Lyr")
+        # Add layer to map
+        m.insertLayer(reference_layer=m.listLayers()[1], 
+                      insert_layer_or_layerfile=raster_layer[0],
+                      insert_position="AFTER")
+        
+        # lyrs = [lyr.name for lyr in m.listLayers()]
+        for i, lyr in enumerate(m.listLayers()):
+            if lyr.name == raster + "_Lyr":
+                l = lyr
+                l_idx = i
+            elif lyr.name not in ["World Terrain Reference", "World Terrain Base", "World Hillshade"]:
+                lyr.visible = False
 
+        sym = l.symbology
+        sym.updateColorizer("RasterClassifyColorizer")
+        # sym.colorizer.classificationField = f"{species_name} Estimated Probability"
+        # sym.colorizer.breakCount = 5
+        upperBound = 0.25
+        for i, brk in enumerate(sym.colorizer.classBreaks):
+            # brk.upperBound = upperBound
+            brk.label = "\u2264 " + str(locale.format_string("%.2f", upperBound, grouping=True))
+            brk.color = {'RGB' : hexToRGB(colors[i])}
+            sym.colorizer.classBreaks[i] = brk
+            upperBound += 0.25
+
+        l.symbology = sym
+        l.visible = True
+        
         print(f"Creating a layout for {species_name}...")
         # Get the default layout
         layout = project.listLayouts("Layout")[0]
@@ -122,16 +119,31 @@ def createMapAndExport(project_path:str,
         # Zoom to the extent of the raster layer
         print("Zooming to map layer extent...")
         mf = layout.listElements("MAPFRAME_ELEMENT")[0]
-        mf.zoomToAllLayers()
+        layer_extent = mf.getLayerExtent(l)
+        mf.panToExtent(layer_extent)
+
+        # Legend
+        print("Updating legend...")
+        legend = layout.listElements("LEGEND_ELEMENT", "Legend")[0]
+        for lyr in legend.items:
+            if lyr.name != raster + "_Lyr":
+                legend.removeItem(lyr)
+        if not l.name in [lyr.name for lyr in legend.items]:
+            legend.addItem(l)
+        legend.showTitle = True
+        legend.title = f"{species_name} Estimated Probability"
 
         # Export the layout to a PDF
         pdf_path = os.path.join(output_folder, raster.replace('Trained_Raster', 'Dist') + ".pdf")
         print(f"Exporting {species_name} layout to {pdf_path}...")
-        layout.exportToPDF(pdf_path)
+        layout.exportToPDF(pdf_path, 
+                           resolution=250, 
+                           image_quality="BEST", 
+                           image_compression="NONE")
         
         # Hide the added raster layer from the map
-        classified_layer[0].visible = False
-
+        l.visible = False
+    arcpy.env.overwriteOutput = False
     # Save the current state of the project
     project.save()
 
@@ -175,7 +187,7 @@ def outputMaps(species_df:pd.DataFrame,
     brd_rasters = {key: value for d in brd_rasters for key, value in d.items()}
 
     # Create map layers export map pdfs for each of the rasters
-    create_map_and_export(project_path, wspace, brd_rasters, output_folder)
+    createMapAndExport(project_path, wspace, brd_rasters, output_folder)
 
 
 # with open("data/species_df.pickle", "wb") as f:
@@ -186,8 +198,8 @@ import pickle
 with open("data/species_df.pickle", "rb") as f:
     species_df = pickle.load(f)
 
-output_maps(species_df, 
-            project_path="woodpeckerNC.aprx", 
-            wspace="woodpeckerNC.gdb", 
-            data_path="data", 
-            output_folder="maps")
+outputMaps(species_df, 
+           project_path="woodpeckerNC.aprx", 
+           wspace="woodpeckerNC.gdb", 
+           data_path="data", 
+           output_folder="maps")

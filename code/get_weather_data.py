@@ -129,8 +129,6 @@ def getWeatherData(data_path:str,
             urllib.request.urlretrieve(url, dwnld_out)
             arcpy.AddMessage(f"Saved {v}/{y} to {dwnld_out}")
             print(f"Saved {v}/{y} to {dwnld_out}")
-            # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
-            # (see https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
             with zipfile.ZipFile(dwnld_out, "r") as zfile:
                 zfile.extractall(dwnld_path)
             arcpy.AddMessage(f"Extracted {v}/{y} from {dwnld_out} to {dwnld_path}")
@@ -148,8 +146,6 @@ def getWeatherData(data_path:str,
             urllib.request.urlretrieve(url, dwnld_out)
             arcpy.AddMessage(f"Saved {v}/{m} to {dwnld_out}")
             print(f"Saved {v}/{m} to {dwnld_out}")
-            # Credit to this method of unzipping a zip file goes to Shyamal Vaderia
-            # (see https://svaderia.github.io/articles/downloading-and-unzipping-a-zipfile/)
             with zipfile.ZipFile(dwnld_out, "r") as zfile:
                 zfile.extractall(dwnld_path)
             arcpy.AddMessage(f"Extracted {v}/{m} from {dwnld_out} to {dwnld_path}")
