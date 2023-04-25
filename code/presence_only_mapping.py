@@ -25,6 +25,7 @@ import os
 import pandas as pd
 from birds import Bird
 import locale
+import sys
 
 def hexToRGB(hex_color:str) -> tuple:
     """
@@ -43,7 +44,8 @@ def createMapAndExport(project_path:str,
                        wspace:str, 
                        brd_rasters:dict, 
                        output_folder:str,
-                       colors:list=['#F6FCE1', '#CFD6B4', '#F5CA7A', '#D98754']) -> None:
+                       colors:list=['#F6FCE1', '#CFD6B4', '#F5CA7A', '#D98754'],
+                       save:bool=True) -> None:
     """
     Creates and exports maps for the modeled distribution of each bird species.
     Args
@@ -53,7 +55,7 @@ def createMapAndExport(project_path:str,
     - output_folder : The output folder location for the PDFs.
     - colors : list of 4 hexidecimal color values
     """
-        
+    
     # Set workspace
     arcpy.env.workspace = wspace
 
@@ -146,18 +148,23 @@ def createMapAndExport(project_path:str,
                            image_quality="BEST", 
                            image_compression="NONE")
         
-        # Hide the added raster layer from the map
-        l.visible = False
     arcpy.env.overwriteOutput = False
     # Save the current state of the project
-    project.save()
+    if save:
+        try:
+            project.save()
+        except OSError as e:
+            arcpy.AddMessage(f"{e}: Make sure the project is not open before attempting to save changes to the map.")
+            print(f"{e}: Make sure the project is not open before attempting to save changes to the map.")
+            sys.exit()
 
 
-def outputMaps(species_df:pd.DataFrame, 
-               project_path:str, 
-               wspace:str, 
-               data_path:str, 
-               output_folder:str) -> None:
+def outputMaxEntMaps(species_df:pd.DataFrame, 
+                     project_path:str, 
+                     wspace:str, 
+                     data_path:str, 
+                     output_folder:str=None) -> None:
+    
     """
     Organizes and generates maps for each bird species.
     Args
@@ -167,6 +174,7 @@ def outputMaps(species_df:pd.DataFrame,
     - data_path : The file path to the data folder.
     - output_folder : The output folder location for the PDFs.
     """
+
     # Checks to confirm valid file paths
     if not os.path.exists(project_path):
         raise FileNotFoundError(f"Project path '{project_path}' not found.")
@@ -177,7 +185,8 @@ def outputMaps(species_df:pd.DataFrame,
     arcpy.env.workspace = wspace
 
     # Create an output folder for the PDFs
-    output_folder = os.path.join(data_path, "maps")
+    if output_folder is None:
+        output_folder = os.path.join(data_path, "maps")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 

@@ -26,7 +26,7 @@ from get_land_cover_data import getLandCoverData
 from get_weather_data import getWeatherData
 from process_bird_data import batchBirdProcessing
 from presence_only import batchMaxEnt
-from presence_only_mapping import outputMaps
+from presence_only_mapping import outputMaxEntMaps
 
 # Define variables 
 try:
@@ -125,11 +125,11 @@ if __name__ == "__main__":
                 nc_boundary=nc_boundary)
     
     ### Mapping ##########
-    
-    outputMaps(NC_WOODPECKERS, 
-               project_path=PROJ_PATH, 
-               wspace=DB_PATH, 
-               data_path=DATA_PATH, 
-               output_folder=os.path.join(DATA_PATH, "maps"))
+
+    outputMaxEntMaps(NC_WOODPECKERS, 
+                     project_path=proj.filePath, 
+                     wspace=DB_PATH, 
+                     data_path=DATA_PATH, 
+                     output_folder=os.path.join(DATA_PATH, "maps"))
 
     print("Finished running woodpeckers_nc.py")

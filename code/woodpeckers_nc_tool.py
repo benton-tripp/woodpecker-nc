@@ -28,7 +28,7 @@ from get_land_cover_data import getLandCoverData
 from get_weather_data import getWeatherData
 from process_bird_data import batchBirdProcessing
 from presence_only import batchMaxEnt
-from presence_only_mapping import outputMaps
+from presence_only_mapping import outputMaxEntMaps
 
 # Define variables 
 proj = arcpy.mp.ArcGISProject('CURRENT')
@@ -151,11 +151,12 @@ if __name__ == "__main__":
                 parameter_grid=PARAMETER_GRID)
     
     ### Mapping ##########
-
-    outputMaps(NC_WOODPECKERS, 
-               project_path=PROJ_PATH, 
-               wspace=DB_PATH, 
-               data_path=DATA_PATH, 
-               output_folder=PDF_OUTPUT_LOCATION)
+ 
+    outputMaxEntMaps(NC_WOODPECKERS, 
+                     project_path=proj.filePath, 
+                     wspace=DB_PATH, 
+                     data_path=DATA_PATH, 
+                     output_folder=PDF_OUTPUT_LOCATION,
+                     save=False)
 
 

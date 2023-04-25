@@ -4,6 +4,7 @@ data/*
 !data/NC_Land_Cover/.gitkeep
 archive/*
 .backup/*
+.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
