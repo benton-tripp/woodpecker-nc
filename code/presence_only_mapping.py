@@ -67,7 +67,7 @@ def createMapAndExport(project_path:str,
         # Get species name
         species_name = brd_rasters[raster]
         print(f"Adding {species_name} raster layer to map...")
-
+        arcpy.AddMessage(f"Adding {species_name} raster layer to map...")
         # Create a new map and add it to the project
         m = project.listMaps("Map")[0]
         
@@ -108,22 +108,26 @@ def createMapAndExport(project_path:str,
         l.visible = True
         
         print(f"Creating a layout for {species_name}...")
+        arcpy.AddMessage(f"Creating a layout for {species_name}...")
         # Get the default layout
         layout = project.listLayouts("Layout")[0]
 
         # Update the title of the layout
         title = [el for el in layout.listElements("TEXT_ELEMENT")][0]
         print("Updating title in layout...")
+        arcpy.AddMessage("Updating title in layout...")
         title.text = species_name + " Modeled Distribution"
         
         # Zoom to the extent of the raster layer
         print("Zooming to map layer extent...")
+        arcpy.AddMessage("Zooming to map layer extent...")
         mf = layout.listElements("MAPFRAME_ELEMENT")[0]
         layer_extent = mf.getLayerExtent(l)
         mf.panToExtent(layer_extent)
 
         # Legend
         print("Updating legend...")
+        arcpy.AddMessage("Updating legend...")
         legend = layout.listElements("LEGEND_ELEMENT", "Legend")[0]
         for lyr in legend.items:
             if lyr.name != raster + "_Lyr":
@@ -136,6 +140,7 @@ def createMapAndExport(project_path:str,
         # Export the layout to a PDF
         pdf_path = os.path.join(output_folder, raster.replace('Trained_Raster', 'Dist') + ".pdf")
         print(f"Exporting {species_name} layout to {pdf_path}...")
+        arcpy.AddMessage(f"Exporting {species_name} layout to {pdf_path}...")
         layout.exportToPDF(pdf_path, 
                            resolution=250, 
                            image_quality="BEST", 
