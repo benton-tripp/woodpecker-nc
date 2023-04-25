@@ -51,7 +51,7 @@ def createMapAndExport(project_path:str,
     - wspace : The workspace location for the raster layers.
     - brd_rasters : The bird/raster name key/value pairs.
     - output_folder : The output folder location for the PDFs.
-    - colors : list of 5 hexidecimal color values
+    - colors : list of 4 hexidecimal color values
     """
         
     # Set workspace
