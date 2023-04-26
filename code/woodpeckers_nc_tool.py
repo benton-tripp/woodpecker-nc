@@ -16,8 +16,21 @@
 # 6. Retrieve land cover, DEM, and weather data (explanatory variables)
 # 7. Run grid-search to train models with given inputs
 # 8. Output results to maps/pdfs
-
-
+# 
+# Example 1:
+# your/working/directory/woodpeckerNC$ python code/woodpeckers_nc_tool.py THRESHOLD 100 10 CLOGLOG false 10 1000 data/maps
+# >>> Setting up environment your/working/directory/woodpeckerNC...
+# >>> Workspace set to woodpeckersNC.gdb...
+# >>> ... <other output from modules called confirming success/failure> ...
+# >>> Finished running grid-search presence only script tool.
+# 
+# Example 2 (note that the second user input has multiple values separated by a semi-colon):
+# your/working/directory/woodpeckerNC$ python code/woodpeckers_nc_tool.py THRESHOLD 100;50 10 CLOGLOG false 10 1000 data/maps
+# >>> Setting up environment your/working/directory/woodpeckerNC...
+# >>> Workspace set to woodpeckersNC.gdb...
+# >>> ... <other output from modules called confirming success/failure> ...
+# >>> Finished running grid-search presence only script tool.
+# 
 # import libraries/modules
 import sys
 import os
@@ -39,17 +52,18 @@ try:
     else:
         spatial_thinning="NO_THINNING"
     PARAMETER_GRID = {
-                        "basis_expansion_functions": [sys.argv[1]],
-                        "relative_weight": [int(i) for i in sys.argv[2].split(";")],
-                        "number_knots": [int(i) for i in sys.argv[3].split(";")], 
-                        "link_function": [sys.argv[4]],
-                        "spatial_thinning": [spatial_thinning],
                         "number_of_iterations": [int(i) for i in sys.argv[6].split(";")],
+                        "basis_expansion_functions":[sys.argv[1]],
+                        "relative_weight": [int(i) for i in sys.argv[2].split(";")],
+                        "number_knots":[int(i) for i in sys.argv[3].split(";")], 
+                        "spatial_thinning": [spatial_thinning],
+                        "link_function": [sys.argv[4]],
                         "thinning_distance_band": [f"{sys.argv[7]} meters"]
                     }
+
     arcpy.AddMessage("Parameter Grid from Inputs:")
     for k, v in zip(PARAMETER_GRID.keys(), PARAMETER_GRID.values()):
-                        arcpy.AddMessage(f"{k}: {v}")
+        arcpy.AddMessage(f"{k}: {v}")
 
     PDF_OUTPUT_LOCATION = sys.argv[8]
 except:
@@ -58,8 +72,19 @@ except:
 
 if __name__ == "__main__":
     ### Set up environment #####
-    proj = arcpy.mp.ArcGISProject('CURRENT')
-    PROJ_PATH = os.path.dirname(proj.filePath) # ./
+    try:
+        proj = arcpy.mp.ArcGISProject('CURRENT')
+        PROJ_PATH = os.path.dirname(proj.filePath) # ./
+        tool_script = True
+    except:
+        PROJ_PATH = os.path.dirname(os.path.dirname(sys.argv[0]))
+        proj_files = [file for file in os.listdir(PROJ_PATH) if file.endswith(".aprx")]
+        if len(proj_files) > 1:
+            print("Error: Too many project files in directory.")
+            arcpy.AddError("Error: Too many project files in directory.")
+            sys.exit()
+        PROJ_FILE = proj_files[0]
+        tool_script = False
     print(f"Setting up environment in {PROJ_PATH}...")
     arcpy.AddMessage(f"Setting up environment in {PROJ_PATH}...")
     DB_PATH = os.path.join(PROJ_PATH, "woodpeckerNC.gdb") # "woodpeckersNC.gdb"
@@ -162,12 +187,19 @@ if __name__ == "__main__":
                 parameter_grid=PARAMETER_GRID)
     
     ### Mapping ##########
- 
-    outputMaxEntMaps(species_df=NC_WOODPECKERS, 
-                     project_path=proj.filePath, 
-                     wspace=DB_PATH, 
-                     data_path=DATA_PATH, 
-                     output_folder=PDF_OUTPUT_LOCATION,
-                     tool_script=True)
-
-
+    if tool_script:
+        outputMaxEntMaps(species_df=NC_WOODPECKERS, 
+                        project_path=proj.filePath, 
+                        wspace=DB_PATH, 
+                        data_path=DATA_PATH, 
+                        output_folder=PDF_OUTPUT_LOCATION,
+                        tool_script=True)
+    else:
+        outputMaxEntMaps(species_df=NC_WOODPECKERS, 
+                        project_path=os.path.join(PROJ_PATH, PROJ_FILE), 
+                        wspace=DB_PATH, 
+                        data_path=DATA_PATH, 
+                        output_folder=PDF_OUTPUT_LOCATION,
+                        tool_script=False)
+        
+    arcpy.AddMessage("Finished running grid-search presence only script tool.")

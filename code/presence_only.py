@@ -220,7 +220,6 @@ def runMaxEnt(static_params:dict,
         for k in outputs.keys():
             if k != "output_sensitivity_table":
                 outputs[k] = None
-
     result = arcpy.stats.PresenceOnlyPrediction(
         # Inputs
         input_point_features=static_params['input_point_features'],
@@ -368,6 +367,7 @@ def batchMaxEnt(species_df:pd.DataFrame,
             
             # Iterate through possible parameter combinations (grid search)
             for i, combination in enumerate(all_combinations, start=1):
+
                 params = dict(zip(parameter_grid.keys(), combination))
 
                 # If model run previously, skip

@@ -8,9 +8,11 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
+            //"program": "${workspaceFolder}/code/woodpeckers_nc_tool.py",
             "program": "${workspaceFolder}/code/woodpeckers_nc.py",
             "console": "integratedTerminal",
-            "args": ["woodpeckerNC.aprx"] 
+            //"args": ["THRESHOLD", "100", "10", "CLOGLOG", "false", "10", "1000", "C:\\Users\\bento\\final_project\\woodpeckerNC\\woodpeckerNC.gdb\\../data/maps"]
+            "args": ["woodpeckerNC.aprx"]
         }
     ]
 }
