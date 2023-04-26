@@ -22,7 +22,6 @@
 import sys
 import os
 import arcpy
-import ast
 from get_bird_data import getSpeciesCodes, getFeederWatchData
 from get_nc_boundary import getNCBoundary
 from get_dem_data import getDEMData
@@ -32,51 +31,56 @@ from process_bird_data import batchBirdProcessing
 from presence_only import batchMaxEnt
 from presence_only_mapping import outputMaxEntMaps
 
-# Define variables 
-proj = arcpy.mp.ArcGISProject('CURRENT')
-PROJ_PATH = os.path.dirname(proj.filePath) # ./
-DB_PATH = proj.defaultGeodatabase # "woodpeckersNC.gdb"
-DATA_PATH = os.path.join(PROJ_PATH, "data") # ./data
-_PREFIX = "FW_"
-_SUFFIX = "woodpeckers_NC"
-BASE_FC = f"{_PREFIX}{_SUFFIX}" # "FW_woodpeckers_NC"
-FW_FILE = f"{BASE_FC}.csv" # "FW_woodpeckers_NC.csv"
-arcpy.AddMessage(f'User Inputs: {"; ".join([f"{i}: {v}" for i, v in enumerate(sys.argv)])}')
-if sys.argv[5] == "true":
-    spatial_thinning=True
-else:
-    spatial_thinning=False
-PARAMETER_GRID = {
-                    "basis_expansion_functions": sys.argv[1],
-                    "relative_weight": [int(i) for i in sys.argv[2]],
-                    "number_knots": [int(i) for i in sys.argv[3]], 
-                    "link_function": sys.argv[4],
-                    "spatial_thinning": spatial_thinning,
-                    "number_of_iterations": [int(i) for i in sys.argv[6]],
-                    "thinning_distance_band": f"{sys.argv[7]} meters"
-                }
-
-PDF_OUTPUT_LOCATION = sys.argv[8]
+# User Input
+try:
+    arcpy.AddMessage(f'User Inputs: {"; ".join([f"{i}: {v}" for i, v in enumerate(sys.argv)])}')
+    if sys.argv[5] == "true":
+        spatial_thinning="THINNING"
+    else:
+        spatial_thinning="NO_THINNING"
+    PARAMETER_GRID = {
+                        "basis_expansion_functions": sys.argv[1],
+                        "relative_weight": [int(i) for i in sys.argv[2]],
+                        "number_knots": [int(i) for i in sys.argv[3]], 
+                        "link_function": sys.argv[4],
+                        "spatial_thinning": spatial_thinning,
+                        "number_of_iterations": [int(i) for i in sys.argv[6]],
+                        "thinning_distance_band": f"{sys.argv[7]} meters"
+                    }
+    PDF_OUTPUT_LOCATION = sys.argv[8]
+except:
+    arcpy.AddError("User input error.")
+    sys.exit()
 
 if __name__ == "__main__":
-    print("\n=================================\nStarting data setup...\n=================================")
-    arcpy.AddMessage("\n=================================\nStarting data setup...\n=================================")
     ### Set up environment #####
+    proj = arcpy.mp.ArcGISProject('CURRENT')
+    PROJ_PATH = os.path.dirname(proj.filePath) # ./
     print(f"Setting up environment in {PROJ_PATH}...")
     arcpy.AddMessage(f"Setting up environment in {PROJ_PATH}...")
-    # Create File Geodatabase
-    if not os.path.exists(DATA_PATH):
-        os.makedirs(DATA_PATH)
+    DB_PATH = os.path.join(PROJ_PATH, "woodpeckerNC.gdb") # "woodpeckersNC.gdb"
     if not os.path.exists(DB_PATH):
-        arcpy.CreateFileGDB_management(DB_PATH)
+        # Create File Geodatabase
+        arcpy.CreateFileGDB_management(PROJ_PATH, "woodpeckerNC.gdb")
     arcpy.env.workspace = DB_PATH
     print(f"Workspace set to {DB_PATH}")
-    arcpy.AddMessage(f"Workspace set to {DB_PATH}...")
+    arcpy.AddMessage(f"Workspace set to {DB_PATH}")
+    DATA_PATH = os.path.join(PROJ_PATH, "data") # ./data
+    if not os.path.exists(DATA_PATH):
+        os.makedirs(DATA_PATH)
+    if PDF_OUTPUT_LOCATION is None:
+        PDF_OUTPUT_LOCATION = os.path.join(DATA_PATH, "maps")
+    _PREFIX = "FW_"
+    _SUFFIX = "woodpeckers_NC"
+    BASE_FC = f"{_PREFIX}{_SUFFIX}" # "FW_woodpeckers_NC"
+    FW_FILE = f"{BASE_FC}.csv" # "FW_woodpeckers_NC.csv"
+
+    print("\n=================================\nStarting data setup...\n=================================")
+    arcpy.AddMessage("\n=================================\nStarting data setup...\n=================================")
     # Existing Feature Classes
     existing_fcs = arcpy.ListFeatureClasses()
     # Projected Coordinate System
     coord_system = arcpy.SpatialReference("NAD 1983 StatePlane North Carolina FIPS 3200 (US Feet)")
-    
     ### Get NC Boundary ##########
     nc_boundary = getNCBoundary(data_path=DATA_PATH, 
                                 wspace=DB_PATH, 
