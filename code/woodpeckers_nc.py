@@ -36,8 +36,10 @@ from presence_only_mapping import outputMaxEntMaps
 
 # User Input
 try:
-    PROJ_PATH = os.path.abspath(sys.argv[1])
-    proj = arcpy.mp.ArcGISProject(PROJ_PATH)
+    PROJ_PATH = os.path.dirname(os.path.abspath(sys.argv[1]))
+    PROJ_FILE = os.path.basename(sys.argv[1])
+    if not os.path.exists(os.path.join(PROJ_PATH, PROJ_FILE)): 
+        raise FileNotFoundError
 except:
     print("Error: Please ensure you entered the correct path to the ArcGIS Project.")
     sys.exit()
@@ -45,7 +47,6 @@ except:
 if __name__ == "__main__":
     ### Set up environment #####
     print(f"Setting up environment in {PROJ_PATH}...")
-    PROJ_PATH = os.path.dirname(proj.filePath) # ./
     DB_PATH = os.path.join(PROJ_PATH, "woodpeckerNC.gdb") # "woodpeckersNC.gdb"
     if not os.path.exists(DB_PATH):
         # Create File Geodatabase
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     ### Mapping ##########
 
     outputMaxEntMaps(species_df=NC_WOODPECKERS, 
-                     project_path=os.path.abspath(sys.argv[1]), 
+                     project_path=os.path.join(PROJ_PATH, PROJ_FILE), 
                      wspace=DB_PATH, 
                      data_path=DATA_PATH, 
                      output_folder=os.path.join(DATA_PATH, "maps"),

@@ -39,14 +39,18 @@ try:
     else:
         spatial_thinning="NO_THINNING"
     PARAMETER_GRID = {
-                        "basis_expansion_functions": sys.argv[1],
-                        "relative_weight": [int(i) for i in sys.argv[2]],
-                        "number_knots": [int(i) for i in sys.argv[3]], 
-                        "link_function": sys.argv[4],
-                        "spatial_thinning": spatial_thinning,
-                        "number_of_iterations": [int(i) for i in sys.argv[6]],
-                        "thinning_distance_band": f"{sys.argv[7]} meters"
+                        "basis_expansion_functions": [sys.argv[1]],
+                        "relative_weight": [int(i) for i in sys.argv[2].split(";")],
+                        "number_knots": [int(i) for i in sys.argv[3].split(";")], 
+                        "link_function": [sys.argv[4]],
+                        "spatial_thinning": [spatial_thinning],
+                        "number_of_iterations": [int(i) for i in sys.argv[6].split(";")],
+                        "thinning_distance_band": [f"{sys.argv[7]} meters"]
                     }
+    arcpy.AddMessage("Parameter Grid from Inputs:")
+    for k, v in zip(PARAMETER_GRID.keys(), PARAMETER_GRID.values()):
+                        arcpy.AddMessage(f"{k}: {v}")
+
     PDF_OUTPUT_LOCATION = sys.argv[8]
 except:
     arcpy.AddError("User input error.")
@@ -63,7 +67,6 @@ if __name__ == "__main__":
         # Create File Geodatabase
         arcpy.CreateFileGDB_management(PROJ_PATH, "woodpeckerNC.gdb")
     arcpy.env.workspace = DB_PATH
-    print(f"Workspace set to {DB_PATH}")
     arcpy.AddMessage(f"Workspace set to {DB_PATH}")
     DATA_PATH = os.path.join(PROJ_PATH, "data") # ./data
     if not os.path.exists(DATA_PATH):
@@ -75,7 +78,6 @@ if __name__ == "__main__":
     BASE_FC = f"{_PREFIX}{_SUFFIX}" # "FW_woodpeckers_NC"
     FW_FILE = f"{BASE_FC}.csv" # "FW_woodpeckers_NC.csv"
 
-    print("\n=================================\nStarting data setup...\n=================================")
     arcpy.AddMessage("\n=================================\nStarting data setup...\n=================================")
     # Existing Feature Classes
     existing_fcs = arcpy.ListFeatureClasses()
@@ -136,7 +138,6 @@ if __name__ == "__main__":
                                                                  nc_boundary=nc_boundary,
                                                                  coord_system=coord_system)
 
-    print("\n=================================\nData setup complete.\n=================================")
     arcpy.AddMessage("\n=================================\nData setup complete.\n=================================")
 
     ### Analyze ###
@@ -150,9 +151,9 @@ if __name__ == "__main__":
     better than any of the models attempted in this search, that model will be selected unless the logged data
     is deleted prior to this tool being run.
     """
-    print(msg_str)
+    
     arcpy.AddMessage(msg_str)
-
+    
     batchMaxEnt(species_df=NC_WOODPECKERS, 
                 wspace=DB_PATH, 
                 data_path=DATA_PATH, 
