@@ -13,7 +13,13 @@
 # 6. Retrieve land cover, DEM, and weather data (explanatory variables)
 # 7. Analyze the data using MaxEnt (maximum entropy modeling) for each woodpecker species
 # 8. Output trained rasters to map layers; Export PDFs of each layer
-
+#
+# Example:
+# your/working/directory/woodpeckerNC$ python code/woodpeckers_nc.py woodpeckerNC.aprx
+# >>> Setting up environment your/working/directory/woodpeckerNC...
+# >>> Workspace set to woodpeckersNC.gdb...
+# >>> ... <other output from modules called confirming success/failure> ...
+# >>> Finished running woodpeckers_nc.py
 
 # import libraries
 import sys
@@ -126,10 +132,11 @@ if __name__ == "__main__":
     
     ### Mapping ##########
 
-    outputMaxEntMaps(NC_WOODPECKERS, 
-                     project_path=proj.filePath, 
+    outputMaxEntMaps(species_df=NC_WOODPECKERS, 
+                     project_path=os.path.abspath(sys.argv[1]), 
                      wspace=DB_PATH, 
                      data_path=DATA_PATH, 
-                     output_folder=os.path.join(DATA_PATH, "maps"))
+                     output_folder=os.path.join(DATA_PATH, "maps"),
+                     tool_script=False)
 
     print("Finished running woodpeckers_nc.py")

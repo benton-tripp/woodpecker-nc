@@ -15,12 +15,14 @@
 # 5. Process the data and set up a geodatabase
 # 6. Retrieve land cover, DEM, and weather data (explanatory variables)
 # 7. Run grid-search to train models with given inputs
+# 8. Output results to maps/pdfs
 
 
 # import libraries/modules
 import sys
 import os
 import arcpy
+import ast
 from get_bird_data import getSpeciesCodes, getFeederWatchData
 from get_nc_boundary import getNCBoundary
 from get_dem_data import getDEMData
@@ -39,14 +41,18 @@ _PREFIX = "FW_"
 _SUFFIX = "woodpeckers_NC"
 BASE_FC = f"{_PREFIX}{_SUFFIX}" # "FW_woodpeckers_NC"
 FW_FILE = f"{BASE_FC}.csv" # "FW_woodpeckers_NC.csv"
-
+arcpy.AddMessage(f'User Inputs: {"; ".join([f"{i}: {v}" for i, v in enumerate(sys.argv)])}')
+if sys.argv[5] == "true":
+    spatial_thinning=True
+else:
+    spatial_thinning=False
 PARAMETER_GRID = {
-                    "number_of_iterations": [sys.argv[1]],
-                    "basis_expansion_functions": sys.argv[2],
-                    "relative_weight": sys.argv[3],
-                    "number_knots": sys.argv[4], 
-                    "spatial_thinning": sys.argv[5],
-                    "link_function": sys.argv[6], 
+                    "basis_expansion_functions": sys.argv[1],
+                    "relative_weight": [int(i) for i in sys.argv[2]],
+                    "number_knots": [int(i) for i in sys.argv[3]], 
+                    "link_function": sys.argv[4],
+                    "spatial_thinning": spatial_thinning,
+                    "number_of_iterations": [int(i) for i in sys.argv[6]],
                     "thinning_distance_band": f"{sys.argv[7]} meters"
                 }
 
@@ -152,11 +158,11 @@ if __name__ == "__main__":
     
     ### Mapping ##########
  
-    outputMaxEntMaps(NC_WOODPECKERS, 
+    outputMaxEntMaps(species_df=NC_WOODPECKERS, 
                      project_path=proj.filePath, 
                      wspace=DB_PATH, 
                      data_path=DATA_PATH, 
                      output_folder=PDF_OUTPUT_LOCATION,
-                     save=False)
+                     tool_script=True)
 
 

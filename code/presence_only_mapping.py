@@ -38,14 +38,12 @@ def hexToRGB(hex_color:str) -> tuple:
     hex_color = hex_color.lstrip('#')
     return list(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) + [100]
 
-
-
 def createMapAndExport(project_path:str, 
                        wspace:str, 
                        brd_rasters:dict, 
                        output_folder:str,
                        colors:list=['#F6FCE1', '#CFD6B4', '#F5CA7A', '#D98754'],
-                       save:bool=True) -> None:
+                       tool_script:bool=False) -> None:
     """
     Creates and exports maps for the modeled distribution of each bird species.
     Args
@@ -54,13 +52,17 @@ def createMapAndExport(project_path:str,
     - brd_rasters : The bird/raster name key/value pairs.
     - output_folder : The output folder location for the PDFs.
     - colors : list of 4 hexidecimal color values
+    - tool_script : whether or not it is running via the tool script
     """
     
     # Set workspace
     arcpy.env.workspace = wspace
 
     # Define project
-    project = arcpy.mp.ArcGISProject(project_path)
+    if tool_script:
+        project = arcpy.mp.ArcGISProject('CURRENT')
+    else:
+        project = arcpy.mp.ArcGISProject(project_path)
     arcpy.env.overwriteOutput = True
     arcpy.env.resamplingMethod = "CUBIC"
 
@@ -150,12 +152,12 @@ def createMapAndExport(project_path:str,
         
     arcpy.env.overwriteOutput = False
     # Save the current state of the project
-    if save:
+    if not tool_script:
         try:
             project.save()
         except OSError as e:
-            arcpy.AddMessage(f"{e}: Make sure the project is not open before attempting to save changes to the map.")
-            print(f"{e}: Make sure the project is not open before attempting to save changes to the map.")
+            arcpy.AddMessage(f"Error:\n{e}: Make sure the project is not open before attempting to save changes to the map.")
+            print(f"Error:\n{e}: Make sure the project is not open before attempting to save changes to the map.")
             sys.exit()
 
 
@@ -163,16 +165,17 @@ def outputMaxEntMaps(species_df:pd.DataFrame,
                      project_path:str, 
                      wspace:str, 
                      data_path:str, 
-                     output_folder:str=None) -> None:
-    
+                     output_folder:str=None,
+                     tool_script:bool=False) -> None:
     """
     Organizes and generates maps for each bird species.
     Args
-    - species_df : The DataFrame of bird species.
-    - project_path : The file path to the project file.
-    - wspace : The workspace location for the raster layers.
-    - data_path : The file path to the data folder.
-    - output_folder : The output folder location for the PDFs.
+    - species_df : The DataFrame of bird species
+    - project_path : The file path to the project file
+    - wspace : The workspace location for the raster layers
+    - data_path : The file path to the data folder
+    - output_folder : The output folder location for the PDFs
+    - tool_script : whether or not it is running from the tool script
     """
 
     # Checks to confirm valid file paths
@@ -201,7 +204,11 @@ def outputMaxEntMaps(species_df:pd.DataFrame,
     brd_rasters = {key: value for d in brd_rasters for key, value in d.items()}
 
     # Create map layers export map pdfs for each of the rasters
-    createMapAndExport(project_path, wspace, brd_rasters, output_folder)
+    createMapAndExport(project_path=project_path, 
+                       wspace=wspace, 
+                       brd_rasters=brd_rasters, 
+                       output_folder=output_folder, 
+                       tool_script=tool_script)
 
 
 
